@@ -1,0 +1,453 @@
+{"_e":"root:init","_t":1792104244791,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792104244791,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792104244792,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792104244935,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792104245050,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792104245126,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792104245320,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"root:init","_t":1792104346036,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792104346036,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792104346037,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792104346170,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792104346280,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792104346363,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792104346549,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"root:init","_t":1792105914731,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792105914731,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792105914732,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792105914887,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792105915010,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792105915093,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792105915385,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1792105968630,"id":"2","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792105968630,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792105968634,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792105969506,"id":"2","progress":0.010000000000000002,"total":1,"current":1}
+{"_e":"metro:bundling:progress","_t":1792105969607,"id":"2","progress":0.12755102040816327,"total":14,"current":5}
+{"_e":"metro:bundling:progress","_t":1792105969705,"id":"2","progress":0.18367346938775508,"total":14,"current":6}
+{"_e":"metro:bundling:progress","_t":1792105969808,"id":"2","progress":0.18367346938775508,"total":21,"current":8}
+{"_e":"metro:bundling:progress","_t":1792105969948,"id":"2","progress":0.18367346938775508,"total":23,"current":9}
+{"_e":"metro:bundling:progress","_t":1792105970028,"id":"2","progress":0.1890359168241966,"total":23,"current":10}
+{"_e":"metro:bundling:progress","_t":1792105970128,"id":"2","progress":0.1890359168241966,"total":29,"current":10}
+{"_e":"metro:bundling:progress","_t":1792105970231,"id":"2","progress":0.1890359168241966,"total":31,"current":11}
+{"_e":"metro:bundling:progress","_t":1792105970366,"id":"2","progress":0.1890359168241966,"total":31,"current":12}
+{"_e":"metro:bundling:progress","_t":1792105970469,"id":"2","progress":0.1890359168241966,"total":36,"current":12}
+{"_e":"metro:bundling:progress","_t":1792105970486,"id":"2","progress":0.1890359168241966,"total":36,"current":13}
+{"_e":"metro:bundling:progress","_t":1792105970587,"id":"2","progress":0.1890359168241966,"total":39,"current":15}
+{"_e":"metro:bundling:progress","_t":1792105970692,"id":"2","progress":0.1890359168241966,"total":40,"current":17}
+{"_e":"metro:bundling:progress","_t":1792105970792,"id":"2","progress":0.1890359168241966,"total":80,"current":22}
+{"_e":"metro:bundling:progress","_t":1792105970892,"id":"2","progress":0.1890359168241966,"total":88,"current":27}
+{"_e":"metro:bundling:progress","_t":1792105971017,"id":"2","progress":0.1890359168241966,"total":91,"current":30}
+{"_e":"metro:bundling:progress","_t":1792105971132,"id":"2","progress":0.1890359168241966,"total":95,"current":32}
+{"_e":"metro:bundling:progress","_t":1792105971244,"id":"2","progress":0.1890359168241966,"total":101,"current":35}
+{"_e":"metro:bundling:progress","_t":1792105971383,"id":"2","progress":0.1890359168241966,"total":202,"current":39}
+{"_e":"metro:bundling:progress","_t":1792105971441,"id":"2","progress":0.1890359168241966,"total":202,"current":40}
+{"_e":"metro:bundling:progress","_t":1792105971555,"id":"2","progress":0.1890359168241966,"total":207,"current":42}
+{"_e":"metro:bundling:progress","_t":1792105971719,"id":"2","progress":0.1890359168241966,"total":207,"current":43}
+{"_e":"metro:bundling:progress","_t":1792105971863,"id":"2","progress":0.1890359168241966,"total":240,"current":45}
+{"_e":"metro:bundling:progress","_t":1792105971964,"id":"2","progress":0.1890359168241966,"total":241,"current":49}
+{"_e":"metro:bundling:progress","_t":1792105972132,"id":"2","progress":0.1890359168241966,"total":241,"current":50}
+{"_e":"metro:bundling:progress","_t":1792105972250,"id":"2","progress":0.1890359168241966,"total":241,"current":53}
+{"_e":"metro:bundling:progress","_t":1792105972388,"id":"2","progress":0.1890359168241966,"total":241,"current":54}
+{"_e":"metro:bundling:progress","_t":1792105972530,"id":"2","progress":0.1890359168241966,"total":243,"current":57}
+{"_e":"metro:bundling:progress","_t":1792105972689,"id":"2","progress":0.1890359168241966,"total":243,"current":58}
+{"_e":"metro:bundling:progress","_t":1792105972810,"id":"2","progress":0.1890359168241966,"total":247,"current":61}
+{"_e":"metro:bundling:progress","_t":1792105972925,"id":"2","progress":0.1890359168241966,"total":248,"current":61}
+{"_e":"metro:bundling:progress","_t":1792105973091,"id":"2","progress":0.1890359168241966,"total":260,"current":67}
+{"_e":"metro:bundling:progress","_t":1792105973282,"id":"2","progress":0.1890359168241966,"total":279,"current":71}
+{"_e":"metro:bundling:progress","_t":1792105973403,"id":"2","progress":0.1890359168241966,"total":329,"current":90}
+{"_e":"metro:bundling:progress","_t":1792105973503,"id":"2","progress":0.1890359168241966,"total":345,"current":99}
+{"_e":"metro:bundling:progress","_t":1792105973603,"id":"2","progress":0.1890359168241966,"total":374,"current":108}
+{"_e":"metro:bundling:progress","_t":1792105973706,"id":"2","progress":0.1890359168241966,"total":383,"current":116}
+{"_e":"metro:bundling:progress","_t":1792105973807,"id":"2","progress":0.1890359168241966,"total":406,"current":122}
+{"_e":"metro:bundling:progress","_t":1792105973906,"id":"2","progress":0.1890359168241966,"total":411,"current":129}
+{"_e":"metro:bundling:progress","_t":1792105974006,"id":"2","progress":0.1890359168241966,"total":435,"current":148}
+{"_e":"metro:bundling:progress","_t":1792105974106,"id":"2","progress":0.1890359168241966,"total":458,"current":171}
+{"_e":"metro:bundling:progress","_t":1792105974209,"id":"2","progress":0.1890359168241966,"total":463,"current":174}
+{"_e":"metro:bundling:progress","_t":1792105974310,"id":"2","progress":0.1890359168241966,"total":475,"current":184}
+{"_e":"metro:bundling:progress","_t":1792105974434,"id":"2","progress":0.1890359168241966,"total":486,"current":204}
+{"_e":"metro:bundling:progress","_t":1792105974538,"id":"2","progress":0.1890359168241966,"total":508,"current":215}
+{"_e":"metro:bundling:progress","_t":1792105974662,"id":"2","progress":0.1890359168241966,"total":512,"current":219}
+{"_e":"metro:bundling:progress","_t":1792105974763,"id":"2","progress":0.1890359168241966,"total":543,"current":223}
+{"_e":"metro:bundling:progress","_t":1792105974857,"id":"2","progress":0.1890359168241966,"total":543,"current":224}
+{"_e":"metro:bundling:progress","_t":1792105974961,"id":"2","progress":0.1890359168241966,"total":555,"current":227}
+{"_e":"metro:bundling:progress","_t":1792105975066,"id":"2","progress":0.1890359168241966,"total":560,"current":232}
+{"_e":"metro:bundling:progress","_t":1792105975173,"id":"2","progress":0.1890359168241966,"total":562,"current":233}
+{"_e":"metro:bundling:progress","_t":1792105975282,"id":"2","progress":0.1890359168241966,"total":567,"current":235}
+{"_e":"metro:bundling:progress","_t":1792105975524,"id":"2","progress":0.1890359168241966,"total":567,"current":236}
+{"_e":"metro:bundling:progress","_t":1792105975624,"id":"2","progress":0.1890359168241966,"total":567,"current":237}
+{"_e":"metro:bundling:progress","_t":1792105975728,"id":"2","progress":0.1890359168241966,"total":568,"current":239}
+{"_e":"metro:bundling:progress","_t":1792105975828,"id":"2","progress":0.1890359168241966,"total":573,"current":244}
+{"_e":"metro:bundling:progress","_t":1792105975940,"id":"2","progress":0.1890359168241966,"total":574,"current":249}
+{"_e":"metro:bundling:progress","_t":1792105976042,"id":"2","progress":0.18948096885813148,"total":595,"current":259}
+{"_e":"metro:bundling:progress","_t":1792105976142,"id":"2","progress":0.19966942969724394,"total":602,"current":269}
+{"_e":"metro:bundling:progress","_t":1792105976253,"id":"2","progress":0.20414785708767014,"total":602,"current":272}
+{"_e":"metro:bundling:progress","_t":1792105976355,"id":"2","progress":0.2067477452781796,"total":607,"current":276}
+{"_e":"metro:bundling:progress","_t":1792105976460,"id":"2","progress":0.2067477452781796,"total":643,"current":282}
+{"_e":"metro:bundling:progress","_t":1792105976569,"id":"2","progress":0.2067477452781796,"total":649,"current":285}
+{"_e":"metro:bundling:progress","_t":1792105976671,"id":"2","progress":0.2067477452781796,"total":660,"current":296}
+{"_e":"metro:bundling:progress","_t":1792105976776,"id":"2","progress":0.21006944444444442,"total":672,"current":308}
+{"_e":"metro:bundling:progress","_t":1792105976892,"id":"2","progress":0.22234322553146146,"total":685,"current":323}
+{"_e":"metro:bundling:progress","_t":1792105976992,"id":"2","progress":0.2292049530932758,"total":706,"current":338}
+{"_e":"metro:bundling:progress","_t":1792105977101,"id":"2","progress":0.23847614316546895,"total":729,"current":356}
+{"_e":"metro:bundling:progress","_t":1792105977198,"id":"2","progress":0.2513568496118565,"total":738,"current":370}
+{"_e":"metro:bundling:progress","_t":1792105977326,"id":"2","progress":0.2533579207503822,"total":747,"current":376}
+{"_e":"metro:bundling:progress","_t":1792105977426,"id":"2","progress":0.2683488977738008,"total":749,"current":388}
+{"_e":"metro:bundling:progress","_t":1792105977557,"id":"2","progress":0.27167045430559567,"total":754,"current":393}
+{"_e":"metro:bundling:progress","_t":1792105977661,"id":"2","progress":0.27431060769557436,"total":758,"current":397}
+{"_e":"metro:bundling:progress","_t":1792105977759,"id":"2","progress":0.2762807772468966,"total":761,"current":400}
+{"_e":"metro:bundling:progress","_t":1792105977858,"id":"2","progress":0.2775154854970311,"total":765,"current":403}
+{"_e":"metro:bundling:progress","_t":1792105977965,"id":"2","progress":0.2788170440038824,"total":767,"current":405}
+{"_e":"metro:bundling:progress","_t":1792105978063,"id":"2","progress":0.2801956181400638,"total":767,"current":406}
+{"_e":"metro:bundling:progress","_t":1792105978130,"id":"2","progress":0.2815775919658536,"total":767,"current":407}
+{"_e":"metro:bundling:progress","_t":1792105978231,"id":"2","progress":0.2885384564389271,"total":767,"current":412}
+{"_e":"metro:bundling:progress","_t":1792105978333,"id":"2","progress":0.2940488128233008,"total":769,"current":417}
+{"_e":"metro:bundling:progress","_t":1792105978435,"id":"2","progress":0.2966232601262868,"total":773,"current":421}
+{"_e":"metro:bundling:progress","_t":1792105978535,"id":"2","progress":0.2966232601262868,"total":796,"current":429}
+{"_e":"metro:bundling:progress","_t":1792105978637,"id":"2","progress":0.29801304114919747,"total":806,"current":440}
+{"_e":"metro:bundling:progress","_t":1792105978736,"id":"2","progress":0.29985438843908374,"total":809,"current":443}
+{"_e":"metro:bundling:progress","_t":1792105978839,"id":"2","progress":0.30256798898669324,"total":809,"current":445}
+{"_e":"metro:bundling:progress","_t":1792105978940,"id":"2","progress":0.3031793933851547,"total":810,"current":446}
+{"_e":"metro:bundling:progress","_t":1792105979011,"id":"2","progress":0.3045404663923182,"total":810,"current":447}
+{"_e":"metro:bundling:progress","_t":1792105979117,"id":"2","progress":0.31015492390136773,"total":817,"current":455}
+{"_e":"metro:bundling:progress","_t":1792105979217,"id":"2","progress":0.31015492390136773,"total":834,"current":457}
+{"_e":"metro:bundling:progress","_t":1792105979320,"id":"2","progress":0.31015492390136773,"total":846,"current":463}
+{"_e":"metro:bundling:progress","_t":1792105979420,"id":"2","progress":0.31015492390136773,"total":848,"current":468}
+{"_e":"metro:bundling:progress","_t":1792105979539,"id":"2","progress":0.31194101795321766,"total":863,"current":482}
+{"_e":"metro:bundling:progress","_t":1792105979640,"id":"2","progress":0.3246502210355613,"total":867,"current":494}
+{"_e":"metro:bundling:progress","_t":1792105979741,"id":"2","progress":0.33125534629348036,"total":867,"current":499}
+{"_e":"metro:bundling:progress","_t":1792105979841,"id":"2","progress":0.33125534629348036,"total":891,"current":508}
+{"_e":"metro:bundling:progress","_t":1792105979941,"id":"2","progress":0.33125534629348036,"total":894,"current":513}
+{"_e":"metro:bundling:progress","_t":1792105980042,"id":"2","progress":0.3472576530612245,"total":896,"current":528}
+{"_e":"metro:bundling:progress","_t":1792105980169,"id":"2","progress":0.3485742685746173,"total":896,"current":529}
+{"_e":"metro:bundling:progress","_t":1792105980275,"id":"2","progress":0.35840531757464317,"total":902,"current":540}
+{"_e":"metro:bundling:progress","_t":1792105980374,"id":"2","progress":0.35840531757464317,"total":923,"current":548}
+{"_e":"metro:bundling:progress","_t":1792105980476,"id":"2","progress":0.35840531757464317,"total":924,"current":552}
+{"_e":"metro:bundling:progress","_t":1792105980577,"id":"2","progress":0.3605185451254612,"total":926,"current":556}
+{"_e":"metro:bundling:progress","_t":1792105980688,"id":"2","progress":0.36331267056880207,"total":944,"current":569}
+{"_e":"metro:bundling:progress","_t":1792105980790,"id":"2","progress":0.36761883656509703,"total":950,"current":576}
+{"_e":"metro:bundling:progress","_t":1792105980890,"id":"2","progress":0.36875728207468655,"total":965,"current":586}
+{"_e":"metro:bundling:progress","_t":1792105980997,"id":"2","progress":0.36875728207468655,"total":1000,"current":602}
+{"_e":"metro:bundling:progress","_t":1792105981096,"id":"2","progress":0.36875728207468655,"total":1021,"current":619}
+{"_e":"metro:bundling:progress","_t":1792105981196,"id":"2","progress":0.37699832356081764,"total":1057,"current":649}
+{"_e":"metro:bundling:progress","_t":1792105981296,"id":"2","progress":0.4075507522176546,"total":1073,"current":685}
+{"_e":"metro:bundling:progress","_t":1792105981407,"id":"2","progress":0.4187548990532488,"total":1091,"current":706}
+{"_e":"metro:bundling:progress","_t":1792105981508,"id":"2","progress":0.4187548990532488,"total":1144,"current":731}
+{"_e":"metro:bundling:progress","_t":1792105981608,"id":"2","progress":0.420199768572643,"total":1157,"current":750}
+{"_e":"metro:bundling:progress","_t":1792105981708,"id":"2","progress":0.4399093267167129,"total":1173,"current":778}
+{"_e":"metro:bundling:progress","_t":1792105981808,"id":"2","progress":0.47402820340913987,"total":1191,"current":820}
+{"_e":"metro:bundling:progress","_t":1792105981908,"id":"2","progress":0.49375927656147856,"total":1194,"current":839}
+{"_e":"metro:bundling:progress","_t":1792105982011,"id":"2","progress":0.5189290163628306,"total":1198,"current":863}
+{"_e":"metro:bundling:progress","_t":1792105982113,"id":"2","progress":0.5189290163628306,"total":1222,"current":880}
+{"_e":"metro:bundling:progress","_t":1792105982213,"id":"2","progress":0.5297853118827791,"total":1231,"current":896}
+{"_e":"metro:bundling:progress","_t":1792105982315,"id":"2","progress":0.5350214620187305,"total":1240,"current":907}
+{"_e":"metro:bundling:progress","_t":1792105982426,"id":"2","progress":0.5400651004719882,"total":1241,"current":912}
+{"_e":"metro:bundling:progress","_t":1792105982527,"id":"2","progress":0.5471945956089322,"total":1241,"current":918}
+{"_e":"metro:bundling:progress","_t":1792105982626,"id":"2","progress":0.56339964000023,"total":1251,"current":939}
+{"_e":"metro:bundling:progress","_t":1792105982727,"id":"2","progress":0.5839151759495881,"total":1255,"current":959}
+{"_e":"metro:bundling:progress","_t":1792105982843,"id":"2","progress":0.6277227085359353,"total":1271,"current":1007}
+{"_e":"metro:bundling:progress","_t":1792105982952,"id":"2","progress":0.6452772918898202,"total":1276,"current":1025}
+{"_e":"metro:bundling:progress","_t":1792105983068,"id":"2","progress":0.6591259633836515,"total":1281,"current":1040}
+{"_e":"metro:bundling:progress","_t":1792105983171,"id":"2","progress":0.6722504642418308,"total":1316,"current":1079}
+{"_e":"metro:bundling:progress","_t":1792105983297,"id":"2","progress":0.6873508718609377,"total":1328,"current":1101}
+{"_e":"metro:bundling:progress","_t":1792105983400,"id":"2","progress":0.7136690576742495,"total":1353,"current":1143}
+{"_e":"metro:bundling:progress","_t":1792105983503,"id":"2","progress":0.7346938775510203,"total":1372,"current":1176}
+{"_e":"metro:bundling:progress","_t":1792105983604,"id":"2","progress":0.7640429671547141,"total":1382,"current":1208}
+{"_e":"metro:bundling:progress","_t":1792105983705,"id":"2","progress":0.7756576530612244,"total":1400,"current":1233}
+{"_e":"metro:bundling:progress","_t":1792105983811,"id":"2","progress":0.7838050218748225,"total":1404,"current":1243}
+{"_e":"metro:bundling:progress","_t":1792105983912,"id":"2","progress":0.7891403232235754,"total":1406,"current":1249}
+{"_e":"metro:bundling:progress","_t":1792105984012,"id":"2","progress":0.7891403232235754,"total":1454,"current":1282}
+{"_e":"metro:bundling:progress","_t":1792105984114,"id":"2","progress":0.8085392248238028,"total":1478,"current":1329}
+{"_e":"metro:bundling:progress","_t":1792105984218,"id":"2","progress":0.8213648883799364,"total":1494,"current":1354}
+{"_e":"metro:bundling:progress","_t":1792105984318,"id":"2","progress":0.823589458917605,"total":1503,"current":1364}
+{"_e":"metro:bundling:progress","_t":1792105984421,"id":"2","progress":0.826985121258429,"total":1534,"current":1395}
+{"_e":"metro:bundling:progress","_t":1792105984521,"id":"2","progress":0.8428227378471738,"total":1562,"current":1434}
+{"_e":"metro:bundling:progress","_t":1792105984621,"id":"2","progress":0.8661309720360767,"total":1572,"current":1463}
+{"_e":"metro:bundling:progress","_t":1792105984727,"id":"2","progress":0.8928394808203458,"total":1579,"current":1492}
+{"_e":"metro:bundling:progress","_t":1792105984825,"id":"2","progress":0.9132721156085691,"total":1601,"current":1530}
+{"_e":"metro:bundling:progress","_t":1792105984931,"id":"2","progress":0.9295059920596019,"total":1616,"current":1558}
+{"_e":"metro:bundling:progress","_t":1792105985031,"id":"2","progress":0.9387351697730837,"total":1639,"current":1588}
+{"_e":"metro:bundling:progress","_t":1792105985131,"id":"2","progress":0.9388023061678233,"total":1673,"current":1621}
+{"_e":"metro:bundling:progress","_t":1792105985232,"id":"2","progress":0.9552735260770975,"total":1680,"current":1642}
+{"_e":"metro:bundling:progress","_t":1792105985333,"id":"2","progress":0.9823480961722247,"total":1692,"current":1677}
+{"_e":"metro:bundling:progress","_t":1792105985434,"id":"2","progress":0.999,"total":1703,"current":1703}
+{"_e":"metro:bundling:done","_t":1792105985709,"id":"2","total":1703,"ms":17079.030125}
+{"_e":"metro:client_log","_t":1792105988360,"level":"warn","data":["[2026-10-15T23:13:08.314Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792105990831,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1792105991760,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
+{"_e":"root:init","_t":1792106383313,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792106383314,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792106383315,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792106383465,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792106383590,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792106383685,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792106383967,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1792106397478,"id":"2","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792106397479,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792106397481,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792106397581,"id":"2","progress":0.2518083123721149,"total":554,"current":278}
+{"_e":"metro:bundling:progress","_t":1792106397681,"id":"2","progress":0.468290740456527,"total":982,"current":672}
+{"_e":"metro:bundling:progress","_t":1792106397781,"id":"2","progress":0.7313016825696046,"total":1298,"current":1110}
+{"_e":"metro:bundling:progress","_t":1792106397881,"id":"2","progress":0.9445224401238204,"total":1635,"current":1589}
+{"_e":"metro:bundling:done","_t":1792106397948,"id":"2","total":1635,"ms":469.382209}
+{"_e":"metro:client_log","_t":1792106398526,"level":"warn","data":["[2026-10-15T23:19:58.525Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792106399053,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1792106399648,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
+{"_e":"root:init","_t":1792151073640,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792151073640,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792151073640,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792151073790,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792151073910,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792151073989,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792151074235,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1792151100722,"id":"2","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792151100723,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792151100725,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792151100830,"id":"2","progress":0.08724560225934322,"total":281,"current":83}
+{"_e":"metro:bundling:progress","_t":1792151100930,"id":"2","progress":0.2014679154989736,"total":479,"current":215}
+{"_e":"metro:bundling:progress","_t":1792151101030,"id":"2","progress":0.35182773503471565,"total":730,"current":433}
+{"_e":"metro:bundling:progress","_t":1792151101130,"id":"2","progress":0.4646230737192836,"total":980,"current":668}
+{"_e":"metro:bundling:progress","_t":1792151101230,"id":"2","progress":0.6256893703983651,"total":1134,"current":897}
+{"_e":"metro:bundling:progress","_t":1792151101330,"id":"2","progress":0.7163007306762618,"total":1204,"current":1019}
+{"_e":"metro:bundling:progress","_t":1792151101430,"id":"2","progress":0.8237880630212615,"total":1429,"current":1297}
+{"_e":"metro:bundling:progress","_t":1792151101530,"id":"2","progress":0.8796415825342525,"total":1594,"current":1495}
+{"_e":"metro:bundling:done","_t":1792151101690,"id":"2","total":1594,"ms":967.354542}
+{"_e":"metro:client_log","_t":1792151104742,"level":"warn","data":["[2026-10-16T11:45:04.741Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792151105137,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1792151106996,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
+{"_e":"metro:server_log","_t":1792152538435,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:bundling:started","_t":1792153883587,"id":"4","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792153883587,"id":"4","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1792153883653,"id":"4","total":1,"ms":65.563125}
+{"_e":"metro:client_log","_t":1792153884212,"level":"warn","data":["[2026-10-16T12:31:24.212Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792153884422,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1792153886272,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
+{"_e":"metro:server_log","_t":1792155803598,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792159767407,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792166119562,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"root:init","_t":1792247580394,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792247580395,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792247580396,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792247580544,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792247580659,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792247580740,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792247580976,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1792247583577,"id":"2","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792247583578,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792247583580,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792247583680,"id":"2","progress":0.26167858686496154,"total":563,"current":288}
+{"_e":"metro:bundling:progress","_t":1792247583780,"id":"2","progress":0.5490274350413703,"total":996,"current":738}
+{"_e":"metro:bundling:progress","_t":1792247583880,"id":"2","progress":0.779493340467259,"total":1426,"current":1259}
+{"_e":"metro:bundling:progress","_t":1792247583980,"id":"2","progress":0.9988217968622225,"total":1697,"current":1696}
+{"_e":"metro:bundling:progress","_t":1792247584149,"id":"2","progress":0.999,"total":1697,"current":1697}
+{"_e":"metro:bundling:done","_t":1792247584199,"id":"2","total":1697,"ms":621.477375}
+{"_e":"metro:client_log","_t":1792247584767,"level":"warn","data":["[2026-10-17T14:33:04.767Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792247585910,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
+{"_e":"metro:server_log","_t":1792248146716,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:client_log","_t":1792248147317,"level":"warn","data":["[2026-10-17T14:42:27.315Z]  @firebase/firestore:","Firestore (12.19.0): WebChannelConnection","RPC 'Listen' stream 0x4ca40c1e transport errored. Name:","undefined","Message:","undefined"]}
+{"_e":"metro:bundling:started","_t":1792248294121,"id":"4","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792248294121,"id":"4","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1792248294167,"id":"4","total":1,"ms":45.909416}
+{"_e":"metro:client_log","_t":1792248294730,"level":"warn","data":["[2026-10-17T14:44:54.730Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792248295490,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
+{"_e":"metro:bundling:started","_t":1792248633497,"id":"6","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792248633497,"id":"6","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:done","_t":1792248633541,"id":"6","total":1,"ms":44.409459}
+{"_e":"metro:client_log","_t":1792248634117,"level":"warn","data":["[2026-10-17T14:50:34.116Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792248634938,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
+{"_e":"metro:server_log","_t":1792254743309,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792259612132,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792261688126,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792263272124,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792264096168,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792266932104,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792267360362,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792268352107,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792270592100,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792273017091,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792274561415,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792277604067,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792280897068,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792282245083,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792285239063,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792288793045,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792290866017,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792294627023,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792296646569,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792297629010,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792300621007,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792302578991,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792304385989,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792306398981,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792307520979,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792308545963,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792311513971,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792313601953,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792317501958,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792319300946,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792320251324,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792321320934,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792322077716,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792323017928,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792324729458,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792325232933,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792326215492,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792328220938,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792329961908,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792331252897,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792333555896,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792334243518,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792334710784,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792337621987,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792337851452,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792338068353,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792338341453,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792338670143,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792338753885,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792338935278,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792339389321,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792339459346,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792339828886,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792340892868,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792342020882,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792345161047,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792346223850,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792349227861,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792353822836,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792355481834,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792355979580,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792356296626,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792357568419,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792358122150,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792359141817,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792360832802,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792361684492,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792362337846,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792363893806,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792365855794,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792368030689,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792371937783,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792374879777,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792376885768,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792378693762,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792380801751,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792382838002,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792383914744,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792385499770,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792385791100,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792387398732,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792388801728,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792389719726,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792391375705,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792391761599,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792392255278,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792398952519,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792400651678,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792401558682,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792402886915,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792403917689,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792404849612,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792406108920,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:server_log","_t":1792406553892,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","host.exp.Exponent","iPhone 18 Pro","60"]}
+{"_e":"metro:bundling:started","_t":1792406746053,"id":"8","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792406746054,"id":"8","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792406746056,"id":"8","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792406746405,"id":"8","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:failed","_t":1792406746444,"id":"8","message":"Unable to resolve \"expo-print\" from \"app/(tabs)/index.tsx\"\n  14 |   writeBatch,\n  15 | } from 'firebase/firestore';\n> 16 | import * as Print from 'expo-print';\n     |                         ^\n  17 | import React, { useCallback, useEffect, useMemo, useState } from 'react';\n  18 | import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';\n  19 | import { SafeAreaView } from 'react-native-safe-area-context';","importStack":"\u001b[1mImport stack:\u001b[22m\n\n\u001b[90m \u001b[39mapp/(tabs)/index.tsx\n\u001b[90m |\u001b[39m \u001b[36mimport\u001b[39m \u001b[32m\"expo-print\"\u001b[39m\n\n\u001b[90m \u001b[39mapp\u001b[2m (require.context)\u001b[22m\n","filename":null,"targetModuleName":"expo-print","originModulePath":"app/(tabs)/index.tsx"}
+{"_e":"root:init","_t":1792406924215,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792406924215,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792406924216,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792406924354,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792406924467,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792406924560,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792406924896,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1792406959633,"id":"2","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792406959633,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792406959635,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792406959853,"id":"2","progress":0.010000000000000002,"total":1,"current":1}
+{"_e":"metro:bundling:progress","_t":1792406959954,"id":"2","progress":0.0478515625,"total":32,"current":7}
+{"_e":"metro:bundling:progress","_t":1792406960064,"id":"2","progress":0.0478515625,"total":138,"current":12}
+{"_e":"metro:bundling:progress","_t":1792406960163,"id":"2","progress":0.0478515625,"total":196,"current":36}
+{"_e":"metro:bundling:progress","_t":1792406960263,"id":"2","progress":0.060399310542947435,"total":236,"current":58}
+{"_e":"metro:bundling:progress","_t":1792406960363,"id":"2","progress":0.17477433138331785,"total":299,"current":125}
+{"_e":"metro:bundling:progress","_t":1792406960463,"id":"2","progress":0.22224489795918367,"total":420,"current":198}
+{"_e":"metro:bundling:progress","_t":1792406960564,"id":"2","progress":0.2910318559556787,"total":532,"current":287}
+{"_e":"metro:bundling:progress","_t":1792406960663,"id":"2","progress":0.29721699119859096,"total":653,"current":356}
+{"_e":"metro:bundling:progress","_t":1792406960763,"id":"2","progress":0.35758332018370725,"total":694,"current":415}
+{"_e":"metro:bundling:progress","_t":1792406960863,"id":"2","progress":0.3747119555001705,"total":758,"current":464}
+{"_e":"metro:bundling:progress","_t":1792406960963,"id":"2","progress":0.46851064105303364,"total":786,"current":538}
+{"_e":"metro:bundling:progress","_t":1792406961063,"id":"2","progress":0.5986467046725985,"total":822,"current":636}
+{"_e":"metro:bundling:progress","_t":1792406961165,"id":"2","progress":0.5986467046725985,"total":922,"current":695}
+{"_e":"metro:bundling:progress","_t":1792406961265,"id":"2","progress":0.6386332091460297,"total":936,"current":748}
+{"_e":"metro:bundling:progress","_t":1792406961365,"id":"2","progress":0.6961392441668319,"total":984,"current":821}
+{"_e":"metro:bundling:progress","_t":1792406961466,"id":"2","progress":0.6961392441668319,"total":1063,"current":867}
+{"_e":"metro:bundling:progress","_t":1792406961566,"id":"2","progress":0.6961392441668319,"total":1148,"current":928}
+{"_e":"metro:bundling:progress","_t":1792406961666,"id":"2","progress":0.6961392441668319,"total":1213,"current":994}
+{"_e":"metro:bundling:progress","_t":1792406961766,"id":"2","progress":0.6961392441668319,"total":1261,"current":1042}
+{"_e":"metro:bundling:progress","_t":1792406961866,"id":"2","progress":0.7073897266116325,"total":1315,"current":1106}
+{"_e":"metro:bundling:progress","_t":1792406961966,"id":"2","progress":0.7403703497438183,"total":1340,"current":1153}
+{"_e":"metro:bundling:progress","_t":1792406962066,"id":"2","progress":0.7595695029037243,"total":1370,"current":1194}
+{"_e":"metro:bundling:progress","_t":1792406962167,"id":"2","progress":0.7828873474139348,"total":1389,"current":1229}
+{"_e":"metro:bundling:progress","_t":1792406962267,"id":"2","progress":0.7840274893588862,"total":1423,"current":1260}
+{"_e":"metro:bundling:progress","_t":1792406962368,"id":"2","progress":0.7954034370660271,"total":1424,"current":1270}
+{"_e":"metro:bundling:progress","_t":1792406962468,"id":"2","progress":0.8219602034746082,"total":1435,"current":1301}
+{"_e":"metro:bundling:progress","_t":1792406962570,"id":"2","progress":0.8575267404766372,"total":1460,"current":1352}
+{"_e":"metro:bundling:progress","_t":1792406962669,"id":"2","progress":0.867975988188718,"total":1507,"current":1404}
+{"_e":"metro:bundling:progress","_t":1792406962769,"id":"2","progress":0.9387121682387318,"total":1542,"current":1494}
+{"_e":"metro:bundling:progress","_t":1792406962869,"id":"2","progress":0.9387121682387318,"total":1668,"current":1614}
+{"_e":"metro:bundling:progress","_t":1792406962969,"id":"2","progress":0.9988217968622225,"total":1697,"current":1696}
+{"_e":"metro:bundling:progress","_t":1792406963103,"id":"2","progress":0.999,"total":1697,"current":1697}
+{"_e":"metro:bundling:failed","_t":1792406963104,"id":"2","message":"Unable to resolve \"expo-print\" from \"app/(tabs)/index.tsx\"\n  14 |   writeBatch,\n  15 | } from 'firebase/firestore';\n> 16 | import * as Print from 'expo-print';\n     |                         ^\n  17 | import React, { useCallback, useEffect, useMemo, useState } from 'react';\n  18 | import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';\n  19 | import { SafeAreaView } from 'react-native-safe-area-context';","importStack":"\u001b[1mImport stack:\u001b[22m\n\n\u001b[90m \u001b[39mapp/(tabs)/index.tsx\n\u001b[90m |\u001b[39m \u001b[36mimport\u001b[39m \u001b[32m\"expo-print\"\u001b[39m\n\n\u001b[90m \u001b[39mapp\u001b[2m (require.context)\u001b[22m\n","filename":null,"targetModuleName":"expo-print","originModulePath":"app/(tabs)/index.tsx"}
+{"_e":"root:init","_t":1792407102101,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792407102102,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792407102102,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792407102224,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792407102310,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792407102387,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792407102667,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"root:init","_t":1792407206510,"format":"v0-jsonl","version":"57.0.27"}
+{"_e":"env:mode","_t":1792407206510,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1792407206510,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1792407206619,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../../../app","serverComponents":false,"serverActions":false,"serverRendering":true,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1792407206703,"serverRoot":"../../..","projectRoot":"../../..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1792407206778,"plugins":[]}
+{"_e":"metro:instantiate","_t":1792407206993,"atlas":false,"workers":7,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1792407214456,"id":"2","platform":"ios","environment":null,"entry":"node_modules/expo-router/entry.js"}
+{"_e":"metro:bundling:progress","_t":1792407214456,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792407214458,"id":"2","progress":0,"total":1,"current":0}
+{"_e":"metro:bundling:progress","_t":1792407214648,"id":"2","progress":0.010000000000000002,"total":1,"current":1}
+{"_e":"metro:bundling:progress","_t":1792407214750,"id":"2","progress":0.18367346938775508,"total":14,"current":6}
+{"_e":"metro:bundling:progress","_t":1792407214819,"id":"2","progress":0.25,"total":14,"current":7}
+{"_e":"metro:bundling:progress","_t":1792407214919,"id":"2","progress":0.25,"total":29,"current":10}
+{"_e":"metro:bundling:progress","_t":1792407215021,"id":"2","progress":0.25,"total":85,"current":25}
+{"_e":"metro:bundling:progress","_t":1792407215121,"id":"2","progress":0.25,"total":261,"current":62}
+{"_e":"metro:bundling:progress","_t":1792407215221,"id":"2","progress":0.25,"total":332,"current":94}
+{"_e":"metro:bundling:progress","_t":1792407215321,"id":"2","progress":0.25,"total":368,"current":115}
+{"_e":"metro:bundling:progress","_t":1792407215421,"id":"2","progress":0.25,"total":425,"current":163}
+{"_e":"metro:bundling:progress","_t":1792407215521,"id":"2","progress":0.25,"total":524,"current":244}
+{"_e":"metro:bundling:progress","_t":1792407215621,"id":"2","progress":0.25,"total":676,"current":314}
+{"_e":"metro:bundling:progress","_t":1792407215721,"id":"2","progress":0.25,"total":724,"current":354}
+{"_e":"metro:bundling:progress","_t":1792407215821,"id":"2","progress":0.28944911166152304,"total":842,"current":453}
+{"_e":"metro:bundling:progress","_t":1792407215921,"id":"2","progress":0.3426531826293872,"total":943,"current":552}
+{"_e":"metro:bundling:progress","_t":1792407216022,"id":"2","progress":0.38555150272518474,"total":1013,"current":629}
+{"_e":"metro:bundling:progress","_t":1792407216123,"id":"2","progress":0.3967822517250415,"total":1070,"current":674}
+{"_e":"metro:bundling:progress","_t":1792407216223,"id":"2","progress":0.4087976058954218,"total":1148,"current":734}
+{"_e":"metro:bundling:progress","_t":1792407216323,"id":"2","progress":0.4338357522602968,"total":1166,"current":768}
+{"_e":"metro:bundling:progress","_t":1792407216423,"id":"2","progress":0.4985504930606281,"total":1184,"current":836}
+{"_e":"metro:bundling:progress","_t":1792407216523,"id":"2","progress":0.5539542750651459,"total":1224,"current":911}
+{"_e":"metro:bundling:progress","_t":1792407216626,"id":"2","progress":0.6135493842684964,"total":1269,"current":994}
+{"_e":"metro:bundling:progress","_t":1792407216726,"id":"2","progress":0.6319459282575315,"total":1307,"current":1039}
+{"_e":"metro:bundling:progress","_t":1792407216829,"id":"2","progress":0.6468162318867277,"total":1318,"current":1060}
+{"_e":"metro:bundling:progress","_t":1792407216929,"id":"2","progress":0.6874142347961684,"total":1340,"current":1111}
+{"_e":"metro:bundling:progress","_t":1792407217030,"id":"2","progress":0.7280609160772948,"total":1363,"current":1163}
+{"_e":"metro:bundling:progress","_t":1792407217130,"id":"2","progress":0.7577765126028674,"total":1390,"current":1210}
+{"_e":"metro:bundling:progress","_t":1792407217230,"id":"2","progress":0.7710581585957244,"total":1452,"current":1275}
+{"_e":"metro:bundling:progress","_t":1792407217330,"id":"2","progress":0.7946863683310352,"total":1474,"current":1314}
+{"_e":"metro:bundling:progress","_t":1792407217430,"id":"2","progress":0.8191091323065418,"total":1506,"current":1363}
+{"_e":"metro:bundling:progress","_t":1792407217555,"id":"2","progress":0.8561359599513788,"total":1539,"current":1424}
+{"_e":"metro:bundling:progress","_t":1792407217655,"id":"2","progress":0.8635023339022598,"total":1583,"current":1471}
+{"_e":"metro:bundling:progress","_t":1792407217755,"id":"2","progress":0.94834168009842,"total":1643,"current":1600}
+{"_e":"metro:bundling:progress","_t":1792407217856,"id":"2","progress":0.999,"total":1705,"current":1705}
+{"_e":"metro:bundling:done","_t":1792407217951,"id":"2","total":1705,"ms":3495.058792}
+{"_e":"metro:client_log","_t":1792407218650,"level":"warn","data":["[2026-10-19T10:53:38.649Z]  @firebase/auth:","Auth (12.19.0): \nYou are initializing Firebase Auth for React Native without providing\nAsyncStorage. Auth state will default to memory persistence and will not\npersist between sessions. In order to persist auth state, install the package\n\"@react-native-async-storage/async-storage\" and provide it to\ninitializeAuth:\n\nimport { initializeAuth, getReactNativePersistence } from 'firebase/auth';\n\n// For @react-native-async-storage/async-storage v3:\nimport { createAsyncStorage } from '@react-native-async-storage/async-storage';\nconst appStorage = createAsyncStorage(\"app\");\nconst persistence = getReactNativePersistence(appStorage);\n\n/*\n// For @react-native-async-storage/async-storage v2:\nimport ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';\nconst persistence = getReactNativePersistence(ReactNativeAsyncStorage);\n*/\n\n// Then, initialize auth:\nconst auth = initializeAuth(app, {\n  persistence\n});\n"]}
+{"_e":"metro:client_log","_t":1792407219585,"level":"log","data":["¡Todas las habitaciones se crearon con éxito en Firestore!"]}
