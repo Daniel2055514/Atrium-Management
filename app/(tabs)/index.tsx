@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
-import { deleteUser, getAuth } from 'firebase/auth';
 import {
   arrayUnion,
   collection,
@@ -13,11 +12,20 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
-import * as Print from 'expo-print';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { db } from '../../services/firebaseConfig';
+
+/* expo-print es opcional: si no está instalado (npx expo install expo-print) la app sigue funcionando
+   y la hoja del día se comparte como texto. */
+let PrintModule: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  PrintModule = require('expo-print');
+} catch {
+  PrintModule = null;
+}
 
 /* ============================================================
    TIPOS
@@ -69,7 +77,16 @@ interface Assignment {
   linen: Record<string, number> | null;
   notes: AssignmentNote[];
 }
-interface RoomState { id: string; status: string; prevStatus: string | null }
+interface RoomState {
+  id: string;
+  status: string;
+  prevStatus: string | null;
+  assignedTo?: string | null;
+  assignedByName?: string | null;
+  assignmentStatus?: 'pending' | 'in_progress' | 'completed' | null;
+  assignedDate?: string | null;
+}
+interface ActivityEvent { id: string; date: string; ts: number; by: string; role: string; type: string; room: string; detail: string }
 interface ScheduleEntry { id: string; staffId: string; date: string; text: string }
 interface SupplyRequest {
   id: string;
@@ -1128,10 +1145,16 @@ const deepMerge = (base: any, over: any): any => {
 };
 // ES (base) → idioma elegido; las claves que falten caen en ES
 const buildT = (lang: string): any => {
-  const es = deepMerge(deepMerge(translations.es, extraTranslations.es), extraTranslations2.es);
+  const es = deepMerge(
+    deepMerge(deepMerge(translations.es, extraTranslations.es), extraTranslations2.es),
+    extraTranslations3.es
+  );
   const sel = deepMerge(
-    deepMerge(translations[lang] || {}, extraTranslations[lang] || {}),
-    extraTranslations2[lang] || {}
+    deepMerge(
+      deepMerge(deepMerge(translations[lang] || {}, extraTranslations[lang] || {}), extraTranslations2[lang] || {}),
+      langPack[lang] || {}
+    ),
+    extraTranslations3[lang] || {}
   );
   return deepMerge(es, sel);
 };
@@ -1158,26 +1181,26 @@ const STAFF_ROLES = ['governess', 'maintenance', 'cleaning', 'equipier'];
 // Departamentos a los que la gobernante puede asignar tareas
 const TASK_ROLES = ['cleaning', 'equipier', 'maintenance'];
 
-const STATUS_KEYS = ['checkout', 'cleaning', 'ready', 'occupied', 'daily', 'blocked'];
+// Estados que eligen recepción y gobernante. «En limpieza» ('cleaning') solo lo marca el personal de limpieza encargado.
+const STATUS_KEYS = ['checkout', 'ready', 'checkoutIn', 'daily', 'blocked'];
 const STATUS_COLORS: Record<string, string> = {
-  checkout: '#10B981',
-  cleaning: '#FACC15',
-  ready: '#0EA5E9',
-  occupied: '#EF4444',
-  daily: '#E5E7EB',
-  blocked: '#111827',
+  checkout: '#10B981',   // verde: salida / check-out
+  ready: '#0EA5E9',      // azul: libre y limpia
+  checkoutIn: '#EF4444', // rojo: salida con check-in (entra otro cliente)
+  daily: '#FFFFFF',      // blanco: limpieza diaria
+  cleaning: '#FACC15',   // amarillo: en limpieza (lo marca el personal de limpieza)
+  blocked: '#111827',    // negro: bloqueada
 };
 const SECTION_GROUPS = [
-  { key: 'secPriority', statuses: ['checkout', 'cleaning', 'blocked'] },
-  { key: 'secStay', statuses: ['occupied', 'daily'] },
+  { key: 'secPriority', statuses: ['checkout', 'checkoutIn', 'cleaning', 'blocked'] },
+  { key: 'secStay', statuses: ['daily'] },
   { key: 'secAvail', statuses: ['ready'] },
 ];
-// En la pestaña de Dirección se invierten verde y rojo (ocupada = verde)
-const statusColor = (status: string, swap: boolean) => {
-  if (swap && status === 'checkout') return STATUS_COLORS.occupied;
-  if (swap && status === 'occupied') return STATUS_COLORS.checkout;
-  return STATUS_COLORS[status];
-};
+const statusColor = (status: string) => STATUS_COLORS[status] || STATUS_COLORS.ready;
+// Estado del plano ↔ tipo de servicio de limpieza
+const STATUS_TO_TASKTYPE: Record<string, 'daily' | 'out' | 'inOut'> = { daily: 'daily', checkout: 'out', checkoutIn: 'inOut' };
+const TASKTYPE_TO_STATUS: Record<string, string> = { daily: 'daily', out: 'checkout', inOut: 'checkoutIn' };
+const WORK_TO_ASSIGNMENT: Record<string, 'pending' | 'in_progress' | 'completed'> = { not_started: 'pending', in_progress: 'in_progress', done: 'completed' };
 
 const WORK_KEYS = ['not_started', 'in_progress', 'done'];
 const WORK_COLORS: Record<string, string> = { not_started: '#64748B', in_progress: '#F59E0B', done: '#10B981' };
@@ -1582,6 +1605,744 @@ const extraTranslations2: Record<string, any> = {
   }
 };
 
+
+/* ============================================================
+   TEXTOS NUEVOS (tercera tanda, 7 idiomas): estado de habitación
+   «salida/check-in», módulo de asignación, resumen del día y registro
+   de actividad.
+   ============================================================ */
+const extraTranslations3: Record<string, any> = {
+  es: {
+    mapView: { status: { checkoutIn: 'Salida / Check-in' } },
+    offline: { label: 'Sin conexión' },
+    assign: {
+      title: '🧹 Asignación de habitaciones',
+      sub: 'Elige al personal de limpieza y marca sus habitaciones. Se sincroniza al instante con recepción y gobernante.',
+      howto: 'ℹ️ Cómo asignar: 1) elige al trabajador, 2) elige la categoría, 3) toca las habitaciones (o «Seleccionar todas») y 4) pulsa «Aceptar y guardar asignación». Solo aparecen las habitaciones que aún no están asignadas hoy y que recepción marcó como salida, salida/check-in o limpieza diaria.',
+      step1: 'Paso 1 · Personal de limpieza', step2: 'Paso 2 · Habitaciones sin asignar',
+      pickWorker: 'Primero selecciona un trabajador.',
+      daily: '🧹 Limpieza diaria', out: '🚪 Salidas', inOut: '🔑 Entradas (salida/check-in)',
+      selectAll: 'Seleccionar todas', deselectAll: 'Quitar selección',
+      selected: '{n} habitaciones seleccionadas para {name}',
+      save: 'Aceptar y guardar asignación', success: 'Habitaciones asignadas correctamente a {name}',
+      noWorkers: 'Primero da de alta personal de limpieza en la pestaña Equipo.',
+      noRooms: 'No hay habitaciones sin asignar en esta categoría. Márcalas antes en el Plano.',
+      listTitle: 'Asignaciones de hoy', empty: 'Todavía no hay habitaciones asignadas hoy.',
+      guestPH: 'Nombre del cliente', nothingSelected: 'Selecciona al menos una habitación.'
+    },
+    summary: {
+      button: '🖨️ Imprimir resumen del día', title: 'Resumen del día', timeline: 'Cronología del día',
+      rooms: 'Estado de las habitaciones', assignments: 'Asignaciones de limpieza', tasks: 'Tareas',
+      supply: 'Faltantes por planta', reports: 'Informes de mantenimiento', counts: 'Conteo de lencería y utensilios',
+      schedule: 'Horarios de hoy', none: 'Sin datos', time: 'Hora', event: 'Suceso', inspected: 'Inspeccionada',
+      notes: 'Notas', linen: 'Lencería', service: 'Servicio', status: 'Estado', text: 'Descripción', task: 'Tarea',
+      floor: 'Planta', shift: 'Horario', by: 'Por', role: 'Rol', yes: 'Sí', no: 'No'
+    },
+    activity: {
+      roomStatus: 'Hab. {room}: estado cambiado a «{detail}» ({by})',
+      assigned: 'Hab. {room} asignada a {detail} ({by})',
+      unassigned: 'Hab. {room}: asignación de {detail} eliminada ({by})',
+      workStatus: 'Hab. {room}: limpieza «{detail}» ({by})',
+      inspectionOk: 'Hab. {room}: inspección aprobada ({by})',
+      inspectionUndo: 'Hab. {room}: aprobación retirada ({by})',
+      block: 'Hab. {room} bloqueada ({by})', unblock: 'Hab. {room} desbloqueada ({by})',
+      note: 'Nota en hab. {room}: {detail} ({by})',
+      linen: 'Hab. {room}: lencería registrada ({by})',
+      task: 'Nueva tarea para {detail} ({by})', taskDone: 'Tarea completada: {detail} ({by})',
+      supply: 'Faltante en planta {room}: {detail} ({by})',
+      report: 'Informe de mantenimiento hab. {room}: {detail} ({by})'
+    }
+  },
+
+  en: {
+    mapView: { status: { checkoutIn: 'Check-out / Check-in' } },
+    offline: { label: 'Offline' },
+    assign: {
+      title: '🧹 Room assignment',
+      sub: 'Pick the housekeeping staff and mark their rooms. It syncs instantly with reception and the head housekeeper.',
+      howto: 'ℹ️ How to assign: 1) pick the worker, 2) pick the category, 3) tap the rooms (or “Select all”) and 4) tap “Accept and save assignment”. Only rooms not yet assigned today that reception marked as check-out, check-out/check-in or daily cleaning are shown.',
+      step1: 'Step 1 · Housekeeping staff', step2: 'Step 2 · Unassigned rooms',
+      pickWorker: 'First select a worker.',
+      daily: '🧹 Daily cleaning', out: '🚪 Check-outs', inOut: '🔑 Arrivals (check-out/check-in)',
+      selectAll: 'Select all', deselectAll: 'Clear selection',
+      selected: '{n} rooms selected for {name}',
+      save: 'Accept and save assignment', success: 'Rooms successfully assigned to {name}',
+      noWorkers: 'First register housekeeping staff in the Team tab.',
+      noRooms: 'No unassigned rooms in this category. Mark them first on the Map.',
+      listTitle: 'Today’s assignments', empty: 'No rooms assigned today yet.',
+      guestPH: 'Guest name', nothingSelected: 'Select at least one room.'
+    },
+    summary: {
+      button: '🖨️ Print day summary', title: 'Daily summary', timeline: 'Timeline of the day',
+      rooms: 'Room status', assignments: 'Cleaning assignments', tasks: 'Tasks',
+      supply: 'Missing items per floor', reports: 'Maintenance reports', counts: 'Linen and supplies count',
+      schedule: 'Today’s schedules', none: 'No data', time: 'Time', event: 'Event', inspected: 'Inspected',
+      notes: 'Notes', linen: 'Linen', service: 'Service', status: 'Status', text: 'Description', task: 'Task',
+      floor: 'Floor', shift: 'Schedule', by: 'By', role: 'Role', yes: 'Yes', no: 'No'
+    },
+    activity: {
+      roomStatus: 'Rm {room}: status changed to “{detail}” ({by})',
+      assigned: 'Rm {room} assigned to {detail} ({by})',
+      unassigned: 'Rm {room}: assignment of {detail} removed ({by})',
+      workStatus: 'Rm {room}: cleaning “{detail}” ({by})',
+      inspectionOk: 'Rm {room}: inspection approved ({by})',
+      inspectionUndo: 'Rm {room}: approval withdrawn ({by})',
+      block: 'Rm {room} blocked ({by})', unblock: 'Rm {room} unblocked ({by})',
+      note: 'Note on rm {room}: {detail} ({by})',
+      linen: 'Rm {room}: linen recorded ({by})',
+      task: 'New task for {detail} ({by})', taskDone: 'Task completed: {detail} ({by})',
+      supply: 'Missing on floor {room}: {detail} ({by})',
+      report: 'Maintenance report rm {room}: {detail} ({by})'
+    }
+  },
+
+  fr: {
+    mapView: { status: { checkoutIn: 'Départ / Check-in' } },
+    offline: { label: 'Hors ligne' },
+    assign: {
+      title: '🧹 Affectation des chambres',
+      sub: 'Choisissez l’agent de nettoyage et cochez ses chambres. Synchronisé instantanément avec la réception et la gouvernante.',
+      howto: 'ℹ️ Comment affecter : 1) choisissez l’agent, 2) choisissez la catégorie, 3) touchez les chambres (ou « Tout sélectionner ») et 4) appuyez sur « Valider et enregistrer l’affectation ». Seules apparaissent les chambres pas encore affectées aujourd’hui que la réception a marquées en départ, départ/check-in ou recouche.',
+      step1: 'Étape 1 · Personnel de nettoyage', step2: 'Étape 2 · Chambres non affectées',
+      pickWorker: 'Sélectionnez d’abord un agent.',
+      daily: '🧹 Recouche', out: '🚪 Départs', inOut: '🔑 Arrivées (départ/check-in)',
+      selectAll: 'Tout sélectionner', deselectAll: 'Tout désélectionner',
+      selected: '{n} chambres sélectionnées pour {name}',
+      save: 'Valider et enregistrer l’affectation', success: 'Chambres affectées avec succès à {name}',
+      noWorkers: 'Enregistrez d’abord du personnel de nettoyage dans l’onglet Équipe.',
+      noRooms: 'Aucune chambre non affectée dans cette catégorie. Marquez-les d’abord sur le Plan.',
+      listTitle: 'Affectations du jour', empty: 'Aucune chambre affectée aujourd’hui.',
+      guestPH: 'Nom du client', nothingSelected: 'Sélectionnez au moins une chambre.'
+    },
+    summary: {
+      button: '🖨️ Imprimer le résumé du jour', title: 'Résumé de la journée', timeline: 'Chronologie de la journée',
+      rooms: 'État des chambres', assignments: 'Affectations de nettoyage', tasks: 'Tâches',
+      supply: 'Manques par étage', reports: 'Rapports de maintenance', counts: 'Comptage du linge et des fournitures',
+      schedule: 'Horaires du jour', none: 'Aucune donnée', time: 'Heure', event: 'Événement', inspected: 'Inspectée',
+      notes: 'Notes', linen: 'Linge', service: 'Service', status: 'Statut', text: 'Description', task: 'Tâche',
+      floor: 'Étage', shift: 'Horaire', by: 'Par', role: 'Rôle', yes: 'Oui', no: 'Non'
+    },
+    activity: {
+      roomStatus: 'Ch. {room} : statut changé en « {detail} » ({by})',
+      assigned: 'Ch. {room} affectée à {detail} ({by})',
+      unassigned: 'Ch. {room} : affectation de {detail} supprimée ({by})',
+      workStatus: 'Ch. {room} : nettoyage « {detail} » ({by})',
+      inspectionOk: 'Ch. {room} : inspection approuvée ({by})',
+      inspectionUndo: 'Ch. {room} : approbation retirée ({by})',
+      block: 'Ch. {room} bloquée ({by})', unblock: 'Ch. {room} débloquée ({by})',
+      note: 'Note sur la ch. {room} : {detail} ({by})',
+      linen: 'Ch. {room} : linge enregistré ({by})',
+      task: 'Nouvelle tâche pour {detail} ({by})', taskDone: 'Tâche terminée : {detail} ({by})',
+      supply: 'Manque à l’étage {room} : {detail} ({by})',
+      report: 'Rapport de maintenance ch. {room} : {detail} ({by})'
+    }
+  },
+
+  it: {
+    mapView: { status: { checkoutIn: 'Partenza / Check-in' } },
+    offline: { label: 'Offline' },
+    assign: {
+      title: '🧹 Assegnazione camere',
+      sub: 'Scegli il personale di pulizia e seleziona le sue camere. Si sincronizza subito con reception e governante.',
+      howto: 'ℹ️ Come assegnare: 1) scegli l’addetto, 2) scegli la categoria, 3) tocca le camere (o «Seleziona tutte») e 4) premi «Accetta e salva assegnazione». Compaiono solo le camere non ancora assegnate oggi che la reception ha segnato come partenza, partenza/check-in o pulizia giornaliera.',
+      step1: 'Passo 1 · Personale di pulizia', step2: 'Passo 2 · Camere non assegnate',
+      pickWorker: 'Seleziona prima un addetto.',
+      daily: '🧹 Pulizia giornaliera', out: '🚪 Partenze', inOut: '🔑 Arrivi (partenza/check-in)',
+      selectAll: 'Seleziona tutte', deselectAll: 'Deseleziona',
+      selected: '{n} camere selezionate per {name}',
+      save: 'Accetta e salva assegnazione', success: 'Camere assegnate correttamente a {name}',
+      noWorkers: 'Registra prima il personale di pulizia nella scheda Team.',
+      noRooms: 'Nessuna camera non assegnata in questa categoria. Segnalale prima nella Mappa.',
+      listTitle: 'Assegnazioni di oggi', empty: 'Oggi non ci sono ancora camere assegnate.',
+      guestPH: 'Nome del cliente', nothingSelected: 'Seleziona almeno una camera.'
+    },
+    summary: {
+      button: '🖨️ Stampa riepilogo del giorno', title: 'Riepilogo giornaliero', timeline: 'Cronologia della giornata',
+      rooms: 'Stato delle camere', assignments: 'Assegnazioni di pulizia', tasks: 'Attività',
+      supply: 'Mancanze per piano', reports: 'Rapporti di manutenzione', counts: 'Conteggio biancheria e utensili',
+      schedule: 'Orari di oggi', none: 'Nessun dato', time: 'Ora', event: 'Evento', inspected: 'Ispezionata',
+      notes: 'Note', linen: 'Biancheria', service: 'Servizio', status: 'Stato', text: 'Descrizione', task: 'Attività',
+      floor: 'Piano', shift: 'Orario', by: 'Da', role: 'Ruolo', yes: 'Sì', no: 'No'
+    },
+    activity: {
+      roomStatus: 'Cam. {room}: stato cambiato in «{detail}» ({by})',
+      assigned: 'Cam. {room} assegnata a {detail} ({by})',
+      unassigned: 'Cam. {room}: assegnazione di {detail} rimossa ({by})',
+      workStatus: 'Cam. {room}: pulizia «{detail}» ({by})',
+      inspectionOk: 'Cam. {room}: ispezione approvata ({by})',
+      inspectionUndo: 'Cam. {room}: approvazione ritirata ({by})',
+      block: 'Cam. {room} bloccata ({by})', unblock: 'Cam. {room} sbloccata ({by})',
+      note: 'Nota sulla cam. {room}: {detail} ({by})',
+      linen: 'Cam. {room}: biancheria registrata ({by})',
+      task: 'Nuova attività per {detail} ({by})', taskDone: 'Attività completata: {detail} ({by})',
+      supply: 'Mancanza al piano {room}: {detail} ({by})',
+      report: 'Rapporto di manutenzione cam. {room}: {detail} ({by})'
+    }
+  },
+
+  pt: {
+    mapView: { status: { checkoutIn: 'Saída / Check-in' } },
+    offline: { label: 'Sem conexão' },
+    assign: {
+      title: '🧹 Atribuição de quartos',
+      sub: 'Escolha o pessoal de limpeza e marque os quartos. Sincroniza na hora com a recepção e a governanta.',
+      howto: 'ℹ️ Como atribuir: 1) escolha o funcionário, 2) escolha a categoria, 3) toque nos quartos (ou «Selecionar todos») e 4) toque em «Aceitar e salvar atribuição». Só aparecem os quartos ainda não atribuídos hoje que a recepção marcou como saída, saída/check-in ou limpeza diária.',
+      step1: 'Passo 1 · Pessoal de limpeza', step2: 'Passo 2 · Quartos sem atribuição',
+      pickWorker: 'Selecione primeiro um funcionário.',
+      daily: '🧹 Limpeza diária', out: '🚪 Saídas', inOut: '🔑 Entradas (saída/check-in)',
+      selectAll: 'Selecionar todos', deselectAll: 'Limpar seleção',
+      selected: '{n} quartos selecionados para {name}',
+      save: 'Aceitar e salvar atribuição', success: 'Quartos atribuídos com sucesso a {name}',
+      noWorkers: 'Primeiro cadastre pessoal de limpeza na aba Equipe.',
+      noRooms: 'Não há quartos sem atribuição nesta categoria. Marque-os antes no Mapa.',
+      listTitle: 'Atribuições de hoje', empty: 'Ainda não há quartos atribuídos hoje.',
+      guestPH: 'Nome do hóspede', nothingSelected: 'Selecione pelo menos um quarto.'
+    },
+    summary: {
+      button: '🖨️ Imprimir resumo do dia', title: 'Resumo do dia', timeline: 'Cronologia do dia',
+      rooms: 'Estado dos quartos', assignments: 'Atribuições de limpeza', tasks: 'Tarefas',
+      supply: 'Faltas por andar', reports: 'Relatórios de manutenção', counts: 'Contagem de enxoval e utensílios',
+      schedule: 'Horários de hoje', none: 'Sem dados', time: 'Hora', event: 'Ocorrência', inspected: 'Inspecionado',
+      notes: 'Notas', linen: 'Enxoval', service: 'Serviço', status: 'Estado', text: 'Descrição', task: 'Tarefa',
+      floor: 'Andar', shift: 'Horário', by: 'Por', role: 'Função', yes: 'Sim', no: 'Não'
+    },
+    activity: {
+      roomStatus: 'Qto. {room}: estado alterado para «{detail}» ({by})',
+      assigned: 'Qto. {room} atribuído a {detail} ({by})',
+      unassigned: 'Qto. {room}: atribuição de {detail} removida ({by})',
+      workStatus: 'Qto. {room}: limpeza «{detail}» ({by})',
+      inspectionOk: 'Qto. {room}: inspeção aprovada ({by})',
+      inspectionUndo: 'Qto. {room}: aprovação retirada ({by})',
+      block: 'Qto. {room} bloqueado ({by})', unblock: 'Qto. {room} desbloqueado ({by})',
+      note: 'Nota no qto. {room}: {detail} ({by})',
+      linen: 'Qto. {room}: enxoval registrado ({by})',
+      task: 'Nova tarefa para {detail} ({by})', taskDone: 'Tarefa concluída: {detail} ({by})',
+      supply: 'Falta no andar {room}: {detail} ({by})',
+      report: 'Relatório de manutenção qto. {room}: {detail} ({by})'
+    }
+  },
+
+  ru: {
+    mapView: { status: { checkoutIn: 'Выезд / Заезд' } },
+    offline: { label: 'Нет сети' },
+    assign: {
+      title: '🧹 Назначение номеров',
+      sub: 'Выберите горничную и отметьте её номера. Синхронизируется мгновенно с рецепцией и старшей горничной.',
+      howto: 'ℹ️ Как назначить: 1) выберите сотрудника, 2) выберите категорию, 3) нажмите на номера (или «Выбрать все») и 4) нажмите «Принять и сохранить назначение». Показаны только номера, ещё не назначенные сегодня и отмеченные рецепцией как выезд, выезд/заезд или ежедневная уборка.',
+      step1: 'Шаг 1 · Персонал по уборке', step2: 'Шаг 2 · Неназначенные номера',
+      pickWorker: 'Сначала выберите сотрудника.',
+      daily: '🧹 Ежедневная уборка', out: '🚪 Выезды', inOut: '🔑 Заезды (выезд/заезд)',
+      selectAll: 'Выбрать все', deselectAll: 'Снять выбор',
+      selected: 'Выбрано номеров: {n} для {name}',
+      save: 'Принять и сохранить назначение', success: 'Номера успешно назначены: {name}',
+      noWorkers: 'Сначала добавьте персонал по уборке на вкладке «Команда».',
+      noRooms: 'В этой категории нет неназначенных номеров. Сначала отметьте их на плане.',
+      listTitle: 'Назначения на сегодня', empty: 'Сегодня номера ещё не назначены.',
+      guestPH: 'Имя гостя', nothingSelected: 'Выберите хотя бы один номер.'
+    },
+    summary: {
+      button: '🖨️ Распечатать итоги дня', title: 'Итоги дня', timeline: 'Хронология дня',
+      rooms: 'Состояние номеров', assignments: 'Назначения на уборку', tasks: 'Задачи',
+      supply: 'Нехватка по этажам', reports: 'Отчёты технической службы', counts: 'Подсчёт белья и инвентаря',
+      schedule: 'Расписание на сегодня', none: 'Нет данных', time: 'Время', event: 'Событие', inspected: 'Проверен',
+      notes: 'Заметки', linen: 'Бельё', service: 'Услуга', status: 'Статус', text: 'Описание', task: 'Задача',
+      floor: 'Этаж', shift: 'Расписание', by: 'Кем', role: 'Должность', yes: 'Да', no: 'Нет'
+    },
+    activity: {
+      roomStatus: 'Ном. {room}: статус изменён на «{detail}» ({by})',
+      assigned: 'Ном. {room} назначен: {detail} ({by})',
+      unassigned: 'Ном. {room}: назначение ({detail}) снято ({by})',
+      workStatus: 'Ном. {room}: уборка «{detail}» ({by})',
+      inspectionOk: 'Ном. {room}: проверка одобрена ({by})',
+      inspectionUndo: 'Ном. {room}: одобрение отозвано ({by})',
+      block: 'Ном. {room} заблокирован ({by})', unblock: 'Ном. {room} разблокирован ({by})',
+      note: 'Заметка по ном. {room}: {detail} ({by})',
+      linen: 'Ном. {room}: бельё записано ({by})',
+      task: 'Новая задача для {detail} ({by})', taskDone: 'Задача выполнена: {detail} ({by})',
+      supply: 'Нехватка на этаже {room}: {detail} ({by})',
+      report: 'Отчёт техслужбы, ном. {room}: {detail} ({by})'
+    }
+  },
+
+  uk: {
+    mapView: { status: { checkoutIn: 'Виїзд / Заїзд' } },
+    offline: { label: 'Немає мережі' },
+    assign: {
+      title: '🧹 Призначення номерів',
+      sub: 'Виберіть покоївку та позначте її номери. Синхронізується миттєво з рецепцією та старшою покоївкою.',
+      howto: 'ℹ️ Як призначити: 1) виберіть працівника, 2) виберіть категорію, 3) натисніть на номери (або «Вибрати всі») і 4) натисніть «Прийняти й зберегти призначення». Показано лише номери, ще не призначені сьогодні та позначені рецепцією як виїзд, виїзд/заїзд або щоденне прибирання.',
+      step1: 'Крок 1 · Персонал із прибирання', step2: 'Крок 2 · Непризначені номери',
+      pickWorker: 'Спочатку виберіть працівника.',
+      daily: '🧹 Щоденне прибирання', out: '🚪 Виїзди', inOut: '🔑 Заїзди (виїзд/заїзд)',
+      selectAll: 'Вибрати всі', deselectAll: 'Зняти вибір',
+      selected: 'Вибрано номерів: {n} для {name}',
+      save: 'Прийняти й зберегти призначення', success: 'Номери успішно призначено: {name}',
+      noWorkers: 'Спочатку додайте персонал із прибирання на вкладці «Команда».',
+      noRooms: 'У цій категорії немає непризначених номерів. Спочатку позначте їх на плані.',
+      listTitle: 'Призначення на сьогодні', empty: 'Сьогодні номери ще не призначено.',
+      guestPH: 'Ім’я гостя', nothingSelected: 'Виберіть принаймні один номер.'
+    },
+    summary: {
+      button: '🖨️ Роздрукувати підсумки дня', title: 'Підсумки дня', timeline: 'Хронологія дня',
+      rooms: 'Стан номерів', assignments: 'Призначення на прибирання', tasks: 'Завдання',
+      supply: 'Нестача по поверхах', reports: 'Звіти технічної служби', counts: 'Підрахунок білизни та інвентарю',
+      schedule: 'Розклад на сьогодні', none: 'Немає даних', time: 'Час', event: 'Подія', inspected: 'Перевірено',
+      notes: 'Нотатки', linen: 'Білизна', service: 'Послуга', status: 'Статус', text: 'Опис', task: 'Завдання',
+      floor: 'Поверх', shift: 'Розклад', by: 'Ким', role: 'Посада', yes: 'Так', no: 'Ні'
+    },
+    activity: {
+      roomStatus: 'Ном. {room}: статус змінено на «{detail}» ({by})',
+      assigned: 'Ном. {room} призначено: {detail} ({by})',
+      unassigned: 'Ном. {room}: призначення ({detail}) знято ({by})',
+      workStatus: 'Ном. {room}: прибирання «{detail}» ({by})',
+      inspectionOk: 'Ном. {room}: перевірку схвалено ({by})',
+      inspectionUndo: 'Ном. {room}: схвалення скасовано ({by})',
+      block: 'Ном. {room} заблоковано ({by})', unblock: 'Ном. {room} розблоковано ({by})',
+      note: 'Нотатка щодо ном. {room}: {detail} ({by})',
+      linen: 'Ном. {room}: білизну записано ({by})',
+      task: 'Нове завдання для {detail} ({by})', taskDone: 'Завдання виконано: {detail} ({by})',
+      supply: 'Нестача на поверсі {room}: {detail} ({by})',
+      report: 'Звіт техслужби, ном. {room}: {detail} ({by})'
+    }
+  }
+};
+
+/* ============================================================
+   PAQUETE DE IDIOMAS IT · PT · RU · UK
+   Traduce los textos nuevos (términos, privacidad, ajustes, equipo,
+   limpieza, equipier, conteo, PIN y horarios) para que las
+   informaciones legales y toda la interfaz salgan en el idioma elegido.
+   ============================================================ */
+const langPack: Record<string, any> = {
+  it: {
+    feed: { tabSettings: '⚙️ Impostazioni', tabAssign: '🧹 Assegnazioni' },
+    terms: {
+      title: 'Termini e informativa sulla privacy',
+      intro: 'Per usare Atrium Management devi accettare i Termini di servizio e l’Informativa sulla privacy.',
+      accept: 'Accetta e continua', decline: 'Rifiuta', declinedTitle: 'Accesso non consentito',
+      declinedBody: 'Senza accettare i termini non puoi usare l’app. Puoi rileggerli in qualsiasi momento.', review: 'Rivedi'
+    },
+    privacy: {
+      title: 'Informativa sulla privacy',
+      clauses: [
+        '1. Dati trattati: nome, mansione, date del contratto, PIN di accesso e dati operativi dell’hotel (attività, rapporti, camere).',
+        '2. Finalità: gestire le operazioni dell’hotel. Non vendiamo né cediamo i tuoi dati a terzi per scopi pubblicitari.',
+        '3. Conservazione: i dati sono archiviati nei servizi Google Firebase (Firestore). Puoi continuare a usare l’app offline; le modifiche si sincronizzano al ritorno della rete.',
+        '4. I tuoi diritti: puoi consultare e rettificare i tuoi dati tramite la direzione ed eliminare account e dati in Impostazioni → Elimina account e dati.',
+        '5. Contatti: per qualsiasi domanda sulla privacy usa il supporto tecnico indicato in Aiuto e supporto.'
+      ],
+      close: 'Chiudi'
+    },
+    footer: { privacy: '🔒 Privacy' },
+    settings: {
+      title: '⚙️ Impostazioni e profilo', profile: 'Il mio profilo', user: 'Utente', roleLabel: 'Ruolo',
+      legal: 'Informazioni legali', terms: '⚖️ Termini di servizio', privacy: '🔒 Informativa sulla privacy',
+      help: '❓ Aiuto e supporto', danger: 'Zona di pericolo', credentials: 'Credenziali di accesso',
+      receptionPin: '🔑 Imposta / reimposta il PIN della reception', info: 'Nessun PIN viene salvato su questo dispositivo.'
+    },
+    account: {
+      deleteBtn: '🗑️ Elimina account e dati',
+      deleteInfoDirection: 'Verranno eliminati TUTTI i dati dell’hotel nel cloud: team, attività, rapporti e le credenziali di direzione e reception. Questa azione non si può annullare.',
+      confirmTitle: 'Eliminare account e dati?', confirmBtn: 'Sì, elimina', deleting: 'Eliminazione…',
+      done: '✅ Il tuo account e i tuoi dati sono stati eliminati.', failed: 'Impossibile completare l’eliminazione. Riprova.',
+      needOnline: 'Serve una connessione a internet per eliminare account e dati.'
+    },
+    offline: {
+      banner: '📡 Nessuna connessione. Puoi continuare a lavorare; le modifiche si sincronizzeranno al ritorno della rete.',
+      loadError: '⚠️ Impossibile caricare i dati dal server. Controlla la connessione o i permessi.',
+      writeFailed: 'Impossibile salvare la modifica. Riprova.', loading: 'Caricamento…'
+    },
+    staffForm: {
+      position: 'Mansione', positionPH: 'Es.: Cameriera ai piani', start: 'Data di inizio', end: 'Data di fine', datePH: 'AAAA-MM-GG',
+      pin: 'PIN di accesso (4 cifre)', pinPH: '••••', invalidDate: 'Data non valida. Usa il formato AAAA-MM-GG.',
+      invalidRange: 'La data di fine non può precedere quella di inizio.', invalidPin: 'Il PIN deve avere esattamente 4 cifre.',
+      edit: '✏️ Modifica dipendente', update: 'Salva modifiche', cancelEdit: 'Annulla modifica', period: 'Contratto',
+      ended: 'Contratto terminato', openEnded: 'indeterminato', delTitle: 'Elimina dipendente',
+      delMsg: 'Eliminare {name}? Perderà l’accesso all’app.', delOk: 'Elimina', saved: '✅ Dipendente salvato.',
+      hint: 'ℹ️ Come registrarlo: inserisci nome e mansione, scegli il ruolo (reparto), indica le date del contratto e un PIN di 4 cifre. Il dipendente accede scegliendo il proprio nome e inserendo quel PIN.',
+      contact: 'E-mail o telefono (per reimpostare il PIN)', contactPH: 'email@esempio.com o +33…',
+      resetPin: 'Reimposta PIN', invalidContact: 'E-mail o telefono non valido.'
+    },
+    login: {
+      enterPin: 'Inserisci un PIN di 4 cifre.', wrongPin: 'PIN errato.', wrongCreds: 'Utente o PIN errati.',
+      pinFor: 'Inserisci il PIN di', firstSetup: 'Primo accesso: utente e PIN inseriti verranno registrati.',
+      receptionUser: 'Utente: recepcion', created: '✅ Credenziali create.',
+      offlineLogin: 'Impossibile verificare l’accesso. Controlla la connessione a internet.',
+      noPin: 'Questo dipendente non ha ancora un PIN. Chiedi alla direzione di impostarlo.'
+    },
+    items: {
+      toiletPaper: 'Carta igienica', paperTowel: 'Carta asciugamani', pens: 'Penne', water: 'Acqua (bottiglie)',
+      coffeePods: 'Capsule di caffè', soap: 'Sapone', shampoo: 'Shampoo', bodyGel: 'Gel doccia'
+    },
+    cleaning: { supplies: 'Utensili e forniture' },
+    cleaningView: {
+      moreInfo: 'ℹ️ Più informazioni', infoTitle: 'Informazioni sulla camera',
+      noAssignments: 'Oggi non hai ancora camere assegnate. La governante o la reception le assegneranno dal loro planning.',
+      linenDetail: 'Asciugamani, lenzuola e federe', noLinenInfo: 'Ancora nessun registro.',
+      addNote: '📝 Aggiungi una nota per la governante', notePH: 'Es.: Tenda rotta, manca un cuscino…',
+      sendNote: 'Invia nota', noteSent: '📝 Nota inviata alla governante.', noteEmpty: 'Scrivi la nota prima di inviarla.',
+      notes: 'Note', noNotes: 'Nessuna nota.', service: 'Servizio', close: 'Chiudi'
+    },
+    supply: {
+      title: '📦 Mancanze per piano', sub: 'Avvisa la governante di ciò che manca a ogni piano; ti creerà lei l’attività.',
+      add: 'Avvisa la governante', floor: 'Piano', textPH: 'Es.: Mancano asciugamani e carta igienica',
+      sent: '📨 Avviso inviato alla governante.', open: 'In attesa', assigned: 'Attività creata', done: 'Fatto',
+      createTask: 'Crea attività', requestsTitle: '📦 Mancanze segnalate dall’equipier', empty: 'Nessun avviso.',
+      mine: 'I miei avvisi', textEmpty: 'Descrivi cosa manca.', taskPrefix: 'Piano'
+    },
+    count: {
+      title: '🧮 Conteggio del giorno', sub: 'Annota con + e − ciò che è stato usato oggi (lenzuola, asciugamani, federe e utensili). Salvato per data.',
+      print: '🖨️ Stampa il foglio del giorno', sheetTitle: 'Foglio di conteggio giornaliero', printedAt: 'Stampato il', by: 'Da',
+      qty: 'Quantità', article: 'Articolo', total: 'Totale', none: 'Nessun articolo conteggiato',
+      printFailed: 'Impossibile aprire la stampa.', date: 'Data', readOnly: 'Conteggio registrato oggi dall’equipier'
+    },
+    pinReset: {
+      title: 'Reimposta PIN', forgot: 'Hai dimenticato il PIN?', contact: 'E-mail o numero di telefono',
+      contactPH: 'email@esempio.com o +33…', newPin: 'Nuovo PIN (4 cifre)', confirm: 'Reimposta',
+      done: '✅ PIN aggiornato. Ora puoi accedere con il nuovo PIN.',
+      mismatch: 'L’e-mail o il telefono non corrisponde a quello registrato.',
+      noContact: 'Nessuna e-mail o telefono registrato. Chiedi alla direzione di reimpostare il PIN.',
+      forStaff: 'Nuovo PIN per', receptionTitle: 'PIN della reception',
+      needContact: 'Primo accesso: inserisci anche un’e-mail o un telefono per poter reimpostare il PIN in seguito.',
+      invalidContact: 'E-mail o telefono non valido.', directionContactLabel: 'E-mail o telefono della direzione',
+      forgotInfo: 'Verifichiamo l’e-mail o il telefono registrato e imposti un nuovo PIN.'
+    },
+    planningEdit: {
+      title: 'Modifica orario', label: 'Orario', ph: 'Es.: 07:00-15:30', clear: 'Cancella',
+      hint: 'Scrivi l’orario come preferisci. Con fasce HH:MM-HH:MM le ore si sommano automaticamente.',
+      tapHint: 'Tocca una casella per scrivere l’orario di quel giorno.'
+    },
+    dashboard: {
+      inspectionEmpty: 'Nessuna camera pianificata oggi. Assegnale nella scheda Assegnazioni.',
+      assignedTo: 'Assegnata a', notesLabel: 'Note'
+    }
+  },
+
+  pt: {
+    feed: { tabSettings: '⚙️ Ajustes', tabAssign: '🧹 Atribuições' },
+    terms: {
+      title: 'Termos e Política de Privacidade',
+      intro: 'Para usar o Atrium Management você deve aceitar os Termos de Serviço e a Política de Privacidade.',
+      accept: 'Aceitar e continuar', decline: 'Recusar', declinedTitle: 'Acesso não permitido',
+      declinedBody: 'Sem aceitar os termos você não pode usar o aplicativo. Você pode revisá-los quando quiser.', review: 'Rever'
+    },
+    privacy: {
+      title: 'Política de privacidade',
+      clauses: [
+        '1. Dados tratados: nome, cargo, datas do contrato, PIN de acesso e dados operacionais do hotel (tarefas, relatórios, quartos).',
+        '2. Finalidade: gerir a operação do hotel. Não vendemos nem cedemos seus dados a terceiros para fins publicitários.',
+        '3. Armazenamento: os dados ficam nos serviços Google Firebase (Firestore). Você pode continuar usando o aplicativo offline; as alterações sincronizam quando a rede voltar.',
+        '4. Seus direitos: você pode consultar e retificar seus dados com a direção e excluir sua conta e seus dados em Ajustes → Excluir conta e dados.',
+        '5. Contato: para qualquer dúvida sobre privacidade, use o suporte técnico indicado em Ajuda e suporte.'
+      ],
+      close: 'Fechar'
+    },
+    footer: { privacy: '🔒 Privacidade' },
+    settings: {
+      title: '⚙️ Ajustes e perfil', profile: 'Meu perfil', user: 'Usuário', roleLabel: 'Função',
+      legal: 'Informações legais', terms: '⚖️ Termos de serviço', privacy: '🔒 Política de privacidade',
+      help: '❓ Ajuda e suporte', danger: 'Zona de perigo', credentials: 'Credenciais de acesso',
+      receptionPin: '🔑 Definir / redefinir PIN da recepção', info: 'Nenhum PIN é guardado neste dispositivo.'
+    },
+    account: {
+      deleteBtn: '🗑️ Excluir conta e dados',
+      deleteInfoDirection: 'TODOS os dados do hotel na nuvem serão excluídos: equipe, tarefas, relatórios e as credenciais da direção e da recepção. Esta ação não pode ser desfeita.',
+      confirmTitle: 'Excluir conta e dados?', confirmBtn: 'Sim, excluir', deleting: 'Excluindo…',
+      done: '✅ Sua conta e seus dados foram excluídos.', failed: 'Não foi possível concluir a exclusão. Tente novamente.',
+      needOnline: 'Você precisa de conexão com a internet para excluir a conta e os dados.'
+    },
+    offline: {
+      banner: '📡 Sem conexão. Você pode continuar trabalhando; as alterações serão sincronizadas quando a rede voltar.',
+      loadError: '⚠️ Não foi possível carregar os dados do servidor. Verifique sua conexão ou permissões.',
+      writeFailed: 'Não foi possível salvar a alteração. Tente novamente.', loading: 'Carregando…'
+    },
+    staffForm: {
+      position: 'Cargo', positionPH: 'Ex.: Camareira', start: 'Data de início', end: 'Data de término', datePH: 'AAAA-MM-DD',
+      pin: 'PIN de acesso (4 dígitos)', pinPH: '••••', invalidDate: 'Data inválida. Use o formato AAAA-MM-DD.',
+      invalidRange: 'A data de término não pode ser anterior à de início.', invalidPin: 'O PIN deve ter exatamente 4 dígitos.',
+      edit: '✏️ Editar funcionário', update: 'Salvar alterações', cancelEdit: 'Cancelar edição', period: 'Contrato',
+      ended: 'Contrato encerrado', openEnded: 'indeterminado', delTitle: 'Excluir funcionário',
+      delMsg: 'Excluir {name}? Perderá o acesso ao aplicativo.', delOk: 'Excluir', saved: '✅ Funcionário salvo.',
+      hint: 'ℹ️ Como cadastrar: digite nome e cargo, escolha a função (departamento), indique as datas do contrato e um PIN de 4 dígitos. O funcionário entra escolhendo seu nome e digitando esse PIN.',
+      contact: 'E-mail ou telefone (para redefinir o PIN)', contactPH: 'email@exemplo.com ou +33…',
+      resetPin: 'Redefinir PIN', invalidContact: 'E-mail ou telefone inválido.'
+    },
+    login: {
+      enterPin: 'Digite um PIN de 4 dígitos.', wrongPin: 'PIN incorreto.', wrongCreds: 'Usuário ou PIN incorretos.',
+      pinFor: 'Digite o PIN de', firstSetup: 'Primeiro acesso: o usuário e o PIN digitados serão registrados.',
+      receptionUser: 'Usuário: recepcion', created: '✅ Credenciais criadas.',
+      offlineLogin: 'Não foi possível verificar o acesso. Verifique sua conexão com a internet.',
+      noPin: 'Este funcionário ainda não tem PIN. Peça à direção para defini-lo.'
+    },
+    items: {
+      toiletPaper: 'Papel higiênico', paperTowel: 'Papel toalha', pens: 'Canetas', water: 'Água (garrafas)',
+      coffeePods: 'Cápsulas de café', soap: 'Sabonete', shampoo: 'Xampu', bodyGel: 'Gel de banho'
+    },
+    cleaning: { supplies: 'Utensílios e suprimentos' },
+    cleaningView: {
+      moreInfo: 'ℹ️ Mais informações', infoTitle: 'Informações do quarto',
+      noAssignments: 'Você ainda não tem quartos atribuídos hoje. A governanta ou a recepção irão atribuí-los pelo planning.',
+      linenDetail: 'Toalhas, lençóis e fronhas', noLinenInfo: 'Ainda sem registros.',
+      addNote: '📝 Adicionar nota para a governanta', notePH: 'Ex.: Cortina rasgada, falta um travesseiro…',
+      sendNote: 'Enviar nota', noteSent: '📝 Nota enviada à governanta.', noteEmpty: 'Escreva a nota antes de enviá-la.',
+      notes: 'Notas', noNotes: 'Sem notas.', service: 'Serviço', close: 'Fechar'
+    },
+    supply: {
+      title: '📦 Faltas por andar', sub: 'Avise a governanta do que falta em cada andar; ela criará a tarefa para você.',
+      add: 'Avisar a governanta', floor: 'Andar', textPH: 'Ex.: Faltam toalhas e papel higiênico',
+      sent: '📨 Aviso enviado à governanta.', open: 'Pendente', assigned: 'Tarefa criada', done: 'Feito',
+      createTask: 'Criar tarefa', requestsTitle: '📦 Faltas avisadas pelo equipier', empty: 'Sem avisos.',
+      mine: 'Meus avisos', textEmpty: 'Descreva o que falta.', taskPrefix: 'Andar'
+    },
+    count: {
+      title: '🧮 Contagem do dia', sub: 'Anote com + e − o que foi usado hoje (lençóis, toalhas, fronhas e utensílios). Salvo por data.',
+      print: '🖨️ Imprimir a folha do dia', sheetTitle: 'Folha de contagem diária', printedAt: 'Impresso em', by: 'Por',
+      qty: 'Quantidade', article: 'Artigo', total: 'Total', none: 'Nenhum artigo contado',
+      printFailed: 'Não foi possível abrir a impressão.', date: 'Data', readOnly: 'Contagem registrada hoje pelo equipier'
+    },
+    pinReset: {
+      title: 'Redefinir PIN', forgot: 'Esqueceu o PIN?', contact: 'E-mail ou telefone',
+      contactPH: 'email@exemplo.com ou +33…', newPin: 'Novo PIN (4 dígitos)', confirm: 'Redefinir',
+      done: '✅ PIN atualizado. Agora você pode entrar com o novo PIN.',
+      mismatch: 'O e-mail ou telefone não corresponde ao registrado.',
+      noContact: 'Não há e-mail ou telefone registrado. Peça à direção para redefinir seu PIN.',
+      forStaff: 'Novo PIN para', receptionTitle: 'PIN da recepção',
+      needContact: 'Primeiro acesso: informe também um e-mail ou telefone para poder redefinir o PIN depois.',
+      invalidContact: 'E-mail ou telefone inválido.', directionContactLabel: 'E-mail ou telefone da direção',
+      forgotInfo: 'Verificamos o e-mail ou telefone registrado e você define um novo PIN.'
+    },
+    planningEdit: {
+      title: 'Editar horário', label: 'Horário', ph: 'Ex.: 07:00-15:30', clear: 'Apagar',
+      hint: 'Escreva o horário como quiser. Com faixas HH:MM-HH:MM as horas são somadas automaticamente.',
+      tapHint: 'Toque em uma célula para escrever o horário desse dia.'
+    },
+    dashboard: {
+      inspectionEmpty: 'Nenhum quarto planejado hoje. Atribua-os na aba Atribuições.',
+      assignedTo: 'Atribuído a', notesLabel: 'Notas'
+    }
+  },
+
+  ru: {
+    feed: { tabSettings: '⚙️ Настройки', tabAssign: '🧹 Назначения' },
+    terms: {
+      title: 'Условия и политика конфиденциальности',
+      intro: 'Чтобы пользоваться Atrium Management, необходимо принять Условия использования и Политику конфиденциальности.',
+      accept: 'Принять и продолжить', decline: 'Отклонить', declinedTitle: 'Доступ запрещён',
+      declinedBody: 'Без принятия условий пользоваться приложением нельзя. Вы можете перечитать их в любой момент.', review: 'Перечитать'
+    },
+    privacy: {
+      title: 'Политика конфиденциальности',
+      clauses: [
+        '1. Обрабатываемые данные: имя, должность, даты договора, PIN-код доступа и рабочие данные отеля (задачи, отчёты, номера).',
+        '2. Цель: управление работой отеля. Мы не продаём и не передаём ваши данные третьим лицам в рекламных целях.',
+        '3. Хранение: данные хранятся в сервисах Google Firebase (Firestore). Вы можете продолжать работать офлайн; изменения синхронизируются при появлении сети.',
+        '4. Ваши права: вы можете получить доступ к своим данным и исправить их через руководство, а также удалить аккаунт и данные в разделе Настройки → Удалить аккаунт и данные.',
+        '5. Контакты: по любым вопросам конфиденциальности обращайтесь в техническую поддержку, указанную в разделе «Помощь и поддержка».'
+      ],
+      close: 'Закрыть'
+    },
+    footer: { privacy: '🔒 Конфиденциальность' },
+    settings: {
+      title: '⚙️ Настройки и профиль', profile: 'Мой профиль', user: 'Пользователь', roleLabel: 'Должность',
+      legal: 'Юридическая информация', terms: '⚖️ Условия использования', privacy: '🔒 Политика конфиденциальности',
+      help: '❓ Помощь и поддержка', danger: 'Опасная зона', credentials: 'Данные для входа',
+      receptionPin: '🔑 Задать / сбросить PIN рецепции', info: 'PIN-коды не сохраняются на этом устройстве.'
+    },
+    account: {
+      deleteBtn: '🗑️ Удалить аккаунт и данные',
+      deleteInfoDirection: 'Будут удалены ВСЕ данные отеля в облаке: команда, задачи, отчёты, а также учётные данные руководства и рецепции. Это действие необратимо.',
+      confirmTitle: 'Удалить аккаунт и данные?', confirmBtn: 'Да, удалить', deleting: 'Удаление…',
+      done: '✅ Ваш аккаунт и данные удалены.', failed: 'Не удалось завершить удаление. Повторите попытку.',
+      needOnline: 'Для удаления аккаунта и данных нужен доступ в интернет.'
+    },
+    offline: {
+      banner: '📡 Нет подключения. Вы можете продолжать работать; изменения синхронизируются при появлении сети.',
+      loadError: '⚠️ Не удалось загрузить данные с сервера. Проверьте подключение или права доступа.',
+      writeFailed: 'Не удалось сохранить изменение. Повторите попытку.', loading: 'Загрузка…'
+    },
+    staffForm: {
+      position: 'Должность', positionPH: 'Напр.: Горничная', start: 'Дата начала', end: 'Дата окончания', datePH: 'ГГГГ-ММ-ДД',
+      pin: 'PIN-код доступа (4 цифры)', pinPH: '••••', invalidDate: 'Неверная дата. Используйте формат ГГГГ-ММ-ДД.',
+      invalidRange: 'Дата окончания не может быть раньше даты начала.', invalidPin: 'PIN-код должен состоять ровно из 4 цифр.',
+      edit: '✏️ Изменить сотрудника', update: 'Сохранить изменения', cancelEdit: 'Отменить редактирование', period: 'Договор',
+      ended: 'Договор завершён', openEnded: 'бессрочный', delTitle: 'Удалить сотрудника',
+      delMsg: 'Удалить {name}? Он потеряет доступ к приложению.', delOk: 'Удалить', saved: '✅ Сотрудник сохранён.',
+      hint: 'ℹ️ Как зарегистрировать: введите имя и должность, выберите роль (отдел), укажите даты договора и PIN из 4 цифр. Сотрудник входит, выбирая своё имя и вводя этот PIN.',
+      contact: 'Эл. почта или телефон (для сброса PIN)', contactPH: 'email@example.com или +33…',
+      resetPin: 'Сбросить PIN', invalidContact: 'Неверная эл. почта или телефон.'
+    },
+    login: {
+      enterPin: 'Введите PIN из 4 цифр.', wrongPin: 'Неверный PIN.', wrongCreds: 'Неверный пользователь или PIN.',
+      pinFor: 'Введите PIN для', firstSetup: 'Первый вход: введённые имя пользователя и PIN будут сохранены.',
+      receptionUser: 'Пользователь: recepcion', created: '✅ Учётные данные созданы.',
+      offlineLogin: 'Не удалось проверить доступ. Проверьте подключение к интернету.',
+      noPin: 'У этого сотрудника ещё нет PIN. Попросите руководство задать его.'
+    },
+    items: {
+      toiletPaper: 'Туалетная бумага', paperTowel: 'Бумажные полотенца', pens: 'Ручки', water: 'Вода (бутылки)',
+      coffeePods: 'Кофейные капсулы', soap: 'Мыло', shampoo: 'Шампунь', bodyGel: 'Гель для душа'
+    },
+    cleaning: { supplies: 'Инвентарь и расходники' },
+    cleaningView: {
+      moreInfo: 'ℹ️ Подробнее', infoTitle: 'Информация о номере',
+      noAssignments: 'Сегодня вам ещё не назначили номера. Их назначит старшая горничная или рецепция в своём расписании.',
+      linenDetail: 'Полотенца, простыни и наволочки', noLinenInfo: 'Записей пока нет.',
+      addNote: '📝 Добавить заметку для старшей горничной', notePH: 'Напр.: Порвана штора, не хватает подушки…',
+      sendNote: 'Отправить заметку', noteSent: '📝 Заметка отправлена старшей горничной.', noteEmpty: 'Напишите заметку перед отправкой.',
+      notes: 'Заметки', noNotes: 'Заметок нет.', service: 'Услуга', close: 'Закрыть'
+    },
+    supply: {
+      title: '📦 Нехватка по этажам', sub: 'Сообщите старшей горничной, чего не хватает на каждом этаже; она создаст для вас задачу.',
+      add: 'Сообщить старшей горничной', floor: 'Этаж', textPH: 'Напр.: Не хватает полотенец и туалетной бумаги',
+      sent: '📨 Сообщение отправлено старшей горничной.', open: 'В ожидании', assigned: 'Задача создана', done: 'Готово',
+      createTask: 'Создать задачу', requestsTitle: '📦 Нехватка, о которой сообщил помощник', empty: 'Сообщений нет.',
+      mine: 'Мои сообщения', textEmpty: 'Опишите, чего не хватает.', taskPrefix: 'Этаж'
+    },
+    count: {
+      title: '🧮 Подсчёт за день', sub: 'Отмечайте кнопками + и − то, что использовано сегодня (простыни, полотенца, наволочки и инвентарь). Сохраняется по дате.',
+      print: '🖨️ Распечатать лист за день', sheetTitle: 'Лист ежедневного подсчёта', printedAt: 'Напечатано', by: 'Кем',
+      qty: 'Количество', article: 'Позиция', total: 'Итого', none: 'Нет учтённых позиций',
+      printFailed: 'Не удалось открыть печать.', date: 'Дата', readOnly: 'Подсчёт, внесённый сегодня помощником'
+    },
+    pinReset: {
+      title: 'Сброс PIN', forgot: 'Забыли PIN?', contact: 'Эл. почта или телефон',
+      contactPH: 'email@example.com или +33…', newPin: 'Новый PIN (4 цифры)', confirm: 'Сбросить',
+      done: '✅ PIN обновлён. Теперь вы можете войти с новым PIN.',
+      mismatch: 'Эл. почта или телефон не совпадает с указанным ранее.',
+      noContact: 'Эл. почта или телефон не указаны. Попросите руководство сбросить ваш PIN.',
+      forStaff: 'Новый PIN для', receptionTitle: 'PIN рецепции',
+      needContact: 'Первый вход: укажите также эл. почту или телефон, чтобы позже можно было сбросить PIN.',
+      invalidContact: 'Неверная эл. почта или телефон.', directionContactLabel: 'Эл. почта или телефон руководства',
+      forgotInfo: 'Мы проверим указанную эл. почту или телефон, и вы зададите новый PIN.'
+    },
+    planningEdit: {
+      title: 'Изменить расписание', label: 'Расписание', ph: 'Напр.: 07:00-15:30', clear: 'Очистить',
+      hint: 'Пишите расписание как удобно. Если использовать интервалы ЧЧ:ММ-ЧЧ:ММ, часы суммируются автоматически.',
+      tapHint: 'Нажмите на ячейку, чтобы записать расписание на этот день.'
+    },
+    dashboard: {
+      inspectionEmpty: 'Сегодня нет запланированных номеров. Назначьте их на вкладке «Назначения».',
+      assignedTo: 'Назначена', notesLabel: 'Заметки'
+    }
+  },
+
+  uk: {
+    feed: { tabSettings: '⚙️ Налаштування', tabAssign: '🧹 Призначення' },
+    terms: {
+      title: 'Умови та політика конфіденційності',
+      intro: 'Щоб користуватися Atrium Management, потрібно прийняти Умови використання та Політику конфіденційності.',
+      accept: 'Прийняти й продовжити', decline: 'Відхилити', declinedTitle: 'Доступ заборонено',
+      declinedBody: 'Без прийняття умов користуватися застосунком не можна. Ви можете переглянути їх будь-коли.', review: 'Переглянути знову'
+    },
+    privacy: {
+      title: 'Політика конфіденційності',
+      clauses: [
+        '1. Дані, що обробляються: ім’я, посада, дати договору, PIN-код доступу та робочі дані готелю (завдання, звіти, номери).',
+        '2. Мета: керування роботою готелю. Ми не продаємо й не передаємо ваші дані третім особам у рекламних цілях.',
+        '3. Зберігання: дані зберігаються в сервісах Google Firebase (Firestore). Ви можете й далі працювати офлайн; зміни синхронізуються, щойно з’явиться мережа.',
+        '4. Ваші права: ви можете переглянути й виправити свої дані через керівництво, а також видалити обліковий запис і дані в розділі Налаштування → Видалити обліковий запис і дані.',
+        '5. Контакти: з будь-яких питань конфіденційності звертайтеся до технічної підтримки, зазначеної в розділі «Допомога та підтримка».'
+      ],
+      close: 'Закрити'
+    },
+    footer: { privacy: '🔒 Конфіденційність' },
+    settings: {
+      title: '⚙️ Налаштування та профіль', profile: 'Мій профіль', user: 'Користувач', roleLabel: 'Посада',
+      legal: 'Юридична інформація', terms: '⚖️ Умови використання', privacy: '🔒 Політика конфіденційності',
+      help: '❓ Допомога та підтримка', danger: 'Небезпечна зона', credentials: 'Дані для входу',
+      receptionPin: '🔑 Задати / скинути PIN рецепції', info: 'PIN-коди не зберігаються на цьому пристрої.'
+    },
+    account: {
+      deleteBtn: '🗑️ Видалити обліковий запис і дані',
+      deleteInfoDirection: 'Буде видалено УСІ дані готелю в хмарі: команду, завдання, звіти, а також облікові дані керівництва та рецепції. Цю дію неможливо скасувати.',
+      confirmTitle: 'Видалити обліковий запис і дані?', confirmBtn: 'Так, видалити', deleting: 'Видалення…',
+      done: '✅ Ваш обліковий запис і дані видалено.', failed: 'Не вдалося завершити видалення. Спробуйте ще раз.',
+      needOnline: 'Для видалення облікового запису й даних потрібне підключення до інтернету.'
+    },
+    offline: {
+      banner: '📡 Немає з’єднання. Ви можете й далі працювати; зміни синхронізуються, щойно з’явиться мережа.',
+      loadError: '⚠️ Не вдалося завантажити дані з сервера. Перевірте з’єднання або права доступу.',
+      writeFailed: 'Не вдалося зберегти зміну. Спробуйте ще раз.', loading: 'Завантаження…'
+    },
+    staffForm: {
+      position: 'Посада', positionPH: 'Напр.: Покоївка', start: 'Дата початку', end: 'Дата завершення', datePH: 'РРРР-ММ-ДД',
+      pin: 'PIN-код доступу (4 цифри)', pinPH: '••••', invalidDate: 'Недійсна дата. Використовуйте формат РРРР-ММ-ДД.',
+      invalidRange: 'Дата завершення не може бути раніше за дату початку.', invalidPin: 'PIN-код має складатися рівно з 4 цифр.',
+      edit: '✏️ Редагувати працівника', update: 'Зберегти зміни', cancelEdit: 'Скасувати редагування', period: 'Договір',
+      ended: 'Договір завершено', openEnded: 'безстроковий', delTitle: 'Видалити працівника',
+      delMsg: 'Видалити {name}? Він втратить доступ до застосунку.', delOk: 'Видалити', saved: '✅ Працівника збережено.',
+      hint: 'ℹ️ Як зареєструвати: введіть ім’я та посаду, виберіть роль (відділ), вкажіть дати договору й PIN із 4 цифр. Працівник входить, вибравши своє ім’я та ввівши цей PIN.',
+      contact: 'Ел. пошта або телефон (для скидання PIN)', contactPH: 'email@example.com або +33…',
+      resetPin: 'Скинути PIN', invalidContact: 'Недійсна ел. пошта або телефон.'
+    },
+    login: {
+      enterPin: 'Введіть PIN із 4 цифр.', wrongPin: 'Неправильний PIN.', wrongCreds: 'Неправильний користувач або PIN.',
+      pinFor: 'Введіть PIN для', firstSetup: 'Перший вхід: введені ім’я користувача та PIN буде збережено.',
+      receptionUser: 'Користувач: recepcion', created: '✅ Облікові дані створено.',
+      offlineLogin: 'Не вдалося перевірити доступ. Перевірте підключення до інтернету.',
+      noPin: 'У цього працівника ще немає PIN. Попросіть керівництво його задати.'
+    },
+    items: {
+      toiletPaper: 'Туалетний папір', paperTowel: 'Паперові рушники', pens: 'Ручки', water: 'Вода (пляшки)',
+      coffeePods: 'Кавові капсули', soap: 'Мило', shampoo: 'Шампунь', bodyGel: 'Гель для душу'
+    },
+    cleaning: { supplies: 'Інвентар і витратні матеріали' },
+    cleaningView: {
+      moreInfo: 'ℹ️ Докладніше', infoTitle: 'Інформація про номер',
+      noAssignments: 'Сьогодні вам ще не призначили номери. Їх призначить старша покоївка або рецепція у своєму розкладі.',
+      linenDetail: 'Рушники, простирадла та наволочки', noLinenInfo: 'Записів ще немає.',
+      addNote: '📝 Додати нотатку для старшої покоївки', notePH: 'Напр.: Порвана штора, бракує подушки…',
+      sendNote: 'Надіслати нотатку', noteSent: '📝 Нотатку надіслано старшій покоївці.', noteEmpty: 'Напишіть нотатку перед надсиланням.',
+      notes: 'Нотатки', noNotes: 'Нотаток немає.', service: 'Послуга', close: 'Закрити'
+    },
+    supply: {
+      title: '📦 Нестача по поверхах', sub: 'Повідомте старшу покоївку, чого бракує на кожному поверсі; вона створить для вас завдання.',
+      add: 'Повідомити старшу покоївку', floor: 'Поверх', textPH: 'Напр.: Бракує рушників і туалетного паперу',
+      sent: '📨 Повідомлення надіслано старшій покоївці.', open: 'В очікуванні', assigned: 'Завдання створено', done: 'Готово',
+      createTask: 'Створити завдання', requestsTitle: '📦 Нестача, про яку повідомив помічник', empty: 'Повідомлень немає.',
+      mine: 'Мої повідомлення', textEmpty: 'Опишіть, чого бракує.', taskPrefix: 'Поверх'
+    },
+    count: {
+      title: '🧮 Підрахунок за день', sub: 'Позначайте кнопками + і − те, що використано сьогодні (простирадла, рушники, наволочки та інвентар). Зберігається за датою.',
+      print: '🖨️ Роздрукувати аркуш за день', sheetTitle: 'Аркуш щоденного підрахунку', printedAt: 'Надруковано', by: 'Ким',
+      qty: 'Кількість', article: 'Позиція', total: 'Разом', none: 'Немає врахованих позицій',
+      printFailed: 'Не вдалося відкрити друк.', date: 'Дата', readOnly: 'Підрахунок, внесений сьогодні помічником'
+    },
+    pinReset: {
+      title: 'Скидання PIN', forgot: 'Забули PIN?', contact: 'Ел. пошта або телефон',
+      contactPH: 'email@example.com або +33…', newPin: 'Новий PIN (4 цифри)', confirm: 'Скинути',
+      done: '✅ PIN оновлено. Тепер ви можете увійти з новим PIN.',
+      mismatch: 'Ел. пошта або телефон не збігається із зазначеними раніше.',
+      noContact: 'Ел. пошту або телефон не вказано. Попросіть керівництво скинути ваш PIN.',
+      forStaff: 'Новий PIN для', receptionTitle: 'PIN рецепції',
+      needContact: 'Перший вхід: вкажіть також ел. пошту або телефон, щоб пізніше можна було скинути PIN.',
+      invalidContact: 'Недійсна ел. пошта або телефон.', directionContactLabel: 'Ел. пошта або телефон керівництва',
+      forgotInfo: 'Ми перевіримо вказану ел. пошту або телефон, а ви задасте новий PIN.'
+    },
+    planningEdit: {
+      title: 'Змінити розклад', label: 'Розклад', ph: 'Напр.: 07:00-15:30', clear: 'Очистити',
+      hint: 'Пишіть розклад як зручно. Якщо вказати проміжки ГГ:ХХ-ГГ:ХХ, години підсумовуються автоматично.',
+      tapHint: 'Натисніть на клітинку, щоб записати розклад на цей день.'
+    },
+    dashboard: {
+      inspectionEmpty: 'Сьогодні немає запланованих номерів. Призначте їх на вкладці «Призначення».',
+      assignedTo: 'Призначена', notesLabel: 'Нотатки'
+    }
+  }
+};
+
+const escHtml = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const PRINT_CSS = `<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 28px; color: #0F172A; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 22px 0 6px; border-bottom: 2px solid #0F172A; padding-bottom: 3px; }
+  .meta { font-size: 12px; color: #475569; margin-bottom: 4px; } .none { font-size: 12px; color: #64748B; font-style: italic; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border-bottom: 1px solid #CBD5E1; padding: 5px 4px; text-align: left; vertical-align: top; }
+  th { background: #F1F5F9; } .n { text-align: right; width: 90px; }
+  .tot td { font-weight: bold; border-top: 2px solid #0F172A; }
+  .grand { margin-top: 18px; font-size: 15px; font-weight: bold; text-align: right; }
+</style>`;
+
 /* ============================================================
    PANTALLA PRINCIPAL
    ============================================================ */
@@ -1632,6 +2393,7 @@ export default function HomeScreen() {
   const roomStatesCol = useFirestoreCollection<RoomState>('roomStates');
   const requestsCol = useFirestoreCollection<SupplyRequest>('supplyRequests');
   const countsCol = useFirestoreCollection<DailyCount>('dailyCounts');
+  const activityCol = useFirestoreCollection<ActivityEvent>('activity');
   const catalogDoc = useFirestoreDoc<{ items: any[] }>('config', 'catalog');
 
   const todayKey = dateKey(new Date());
@@ -1668,17 +2430,25 @@ export default function HomeScreen() {
     [countsCol.items, todayKey]
   );
 
-  // Plano: el estado de cada habitación se guarda en Firestore (roomStates); por defecto "libre y limpia"
+  // Plano: el estado de cada habitación (y su asignación del día) se guarda en Firestore (roomStates)
   const rooms = useMemo(() => {
     const map: Record<string, RoomState> = {};
     roomStatesCol.items.forEach(r => { map[r.id] = r; });
     return FLOORS.flatMap(({ f, ids }) =>
-      ids.map(id => ({ id, floor: f, status: map[id]?.status || 'ready', prevStatus: map[id]?.prevStatus || null }))
+      ids.map(id => {
+        const st = map[id];
+        const status = !st?.status ? 'ready' : st.status === 'occupied' ? 'daily' : st.status; // 'occupied' era el estado antiguo
+        return {
+          id, floor: f, status, prevStatus: st?.prevStatus || null,
+          assignedTo: st?.assignedTo || null, assignedByName: st?.assignedByName || null,
+          assignmentStatus: st?.assignmentStatus || null, assignedDate: st?.assignedDate || null,
+        };
+      })
     );
   }, [roomStatesCol.items]);
 
   // Estado de red: caché sin servidor o error de lectura
-  const cols = [staffCol, tasksCol, reportsCol, scheduleCol, assignmentsCol, roomStatesCol, requestsCol, countsCol];
+  const cols = [staffCol, tasksCol, reportsCol, scheduleCol, assignmentsCol, roomStatesCol, requestsCol, countsCol, activityCol];
   const loadError = cols.find(c => c.error)?.error || null;
   const offlineRaw = !!loadError || (staffCol.ready && cols.some(c => c.fromCache));
   const [showOffline, setShowOffline] = useState(false);
@@ -1751,12 +2521,11 @@ export default function HomeScreen() {
   const [newStaffPin, setNewStaffPin] = useState('');
   const [newStaffContact, setNewStaffContact] = useState('');
 
-  // Asignación de habitaciones (gobernante / recepción)
-  const [assignDayOffset, setAssignDayOffset] = useState(0);
+  // Asignación de habitaciones (gobernante / recepción / dirección)
   const [assignWorkerId, setAssignWorkerId] = useState<string | null>(null);
-  const [roomsDaily, setRoomsDaily] = useState('');
-  const [roomsOut, setRoomsOut] = useState('');
-  const [roomsInOut, setRoomsInOut] = useState('');
+  const [assignCategory, setAssignCategory] = useState<'daily' | 'out' | 'inOut'>('out');
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
+  const [assignSaving, setAssignSaving] = useState(false);
 
   // Utensilios
   const [newItemName, setNewItemName] = useState('');
@@ -1905,7 +2674,7 @@ export default function HomeScreen() {
     if (offlineRaw) { notify(t.account.needOnline); return; }
     setDeleting(true);
     try {
-      const collectionsToWipe = ['staff', 'tasks', 'reports', 'schedule', 'assignments', 'roomStates', 'supplyRequests', 'dailyCounts'];
+      const collectionsToWipe = ['staff', 'tasks', 'reports', 'schedule', 'assignments', 'roomStates', 'supplyRequests', 'dailyCounts', 'activity'];
       for (const name of collectionsToWipe) {
         const snap = await getDocs(collection(db, name));
         for (let i = 0; i < snap.docs.length; i += 400) {
@@ -1919,15 +2688,17 @@ export default function HomeScreen() {
 
       // Si la app usa Firebase Auth, también se elimina el usuario autenticado
       try {
-        const authUser = getAuth().currentUser;
-        if (authUser) await deleteUser(authUser);
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const authModule = require('firebase/auth');
+        const authUser = authModule.getAuth().currentUser;
+        if (authUser) await authModule.deleteUser(authUser);
       } catch (authError) {
         console.warn('No se pudo eliminar el usuario de Auth (puede requerir reautenticación):', authError);
       }
 
       await AsyncStorage.multiRemove([
         HOTEL_STORAGE_KEY,
-        ...['staff', 'tasks', 'reports', 'schedule', 'assignments', 'roomStates', 'supplyRequests', 'dailyCounts'].map(n => CACHE_PREFIX + n),
+        ...['staff', 'tasks', 'reports', 'schedule', 'assignments', 'roomStates', 'supplyRequests', 'dailyCounts', 'activity'].map(n => CACHE_PREFIX + n),
       ]);
       handleLogout();
       notify(t.account.done);
@@ -1946,33 +2717,48 @@ export default function HomeScreen() {
     });
   };
 
-  /* ---------- Habitaciones (plano) ---------- */
-  const setRoomState = (id: string, status: string, prevStatus: string | null) => {
-    setDoc(doc(db, 'roomStates', id), { status, prevStatus: prevStatus ?? null }, { merge: true }).catch(writeFailed);
+  /* ---------- Registro de actividad (alimenta el resumen del día) ---------- */
+  const logEvent = (type: string, room = '', detail = '') => {
+    setDoc(doc(collection(db, 'activity')), {
+      date: todayKey, ts: Date.now(), by: session?.username || '', role: session?.role || '', type, room, detail,
+    }).catch(e => console.error('Error al registrar actividad:', e));
   };
 
+  /* ---------- Habitaciones (plano) ---------- */
+  const setRoomState = (id: string, status: string, prevStatus: string | null, extra: Record<string, any> = {}) => {
+    setDoc(doc(db, 'roomStates', id), { status, prevStatus: prevStatus ?? null, ...extra }, { merge: true }).catch(writeFailed);
+  };
+
+  // Recepción y gobernante eligen: salida, libre y limpia, salida/check-in, limpieza diaria o bloqueada.
+  // «En limpieza» solo lo pone el personal de limpieza encargado de la habitación (ver changeWork).
   const applyRoomStatus = (roomNumber: string, status: string) => {
     const room = rooms.find(r => r.id === roomNumber);
     if (!room) return;
     const prevStatus = status === 'blocked' ? (room.status === 'blocked' ? room.prevStatus : room.status) : room.prevStatus;
-    setRoomState(roomNumber, status, prevStatus);
-    const mapWork: Record<string, string> = { checkout: 'not_started', cleaning: 'in_progress', ready: 'done' };
-    if (mapWork[status]) {
-      todayAssignments.filter(a => a.room === roomNumber).forEach(a => {
-        updateDoc(doc(db, 'assignments', a.id), { workStatus: mapWork[status] }).catch(writeFailed);
-      });
+    const mapWork: Record<string, 'not_started' | 'done'> = { checkout: 'not_started', checkoutIn: 'not_started', daily: 'not_started', ready: 'done' };
+    const work = mapWork[status];
+    const mine = todayAssignments.filter(a => a.room === roomNumber);
+    setRoomState(roomNumber, status, prevStatus, work && mine.length ? { assignmentStatus: WORK_TO_ASSIGNMENT[work] } : {});
+    if (work) {
+      mine.forEach(a => { updateDoc(doc(db, 'assignments', a.id), { workStatus: work }).catch(writeFailed); });
     }
+    if (status === 'blocked') logEvent('block', roomNumber);
+    else if (room.status === 'blocked') logEvent('unblock', roomNumber);
+    else logEvent('roomStatus', roomNumber, status);
   };
 
   const changeWork = (item: Assignment, work: string) => {
     const role = getRole();
     if (role !== 'cleaning' && role !== 'governess') { notify(t.alerts.noPermission); return; }
+    // Solo la persona de limpieza encargada de la habitación puede cambiar su estado
+    if (role === 'cleaning' && item.staffId !== session?.staffId) { notify(t.alerts.noPermission); return; }
     if (isRoomBlocked(item.room)) { notify(t.alerts.roomBlocked); return; }
     updateDoc(doc(db, 'assignments', item.id), { workStatus: work }).catch(writeFailed);
     const isDaily = item.taskType === 'daily';
-    const status = work === 'in_progress' ? 'cleaning' : work === 'done' ? (isDaily ? 'occupied' : 'ready') : (isDaily ? 'daily' : 'checkout');
+    const status = work === 'in_progress' ? 'cleaning' : work === 'done' ? (isDaily ? 'daily' : 'ready') : TASKTYPE_TO_STATUS[item.taskType];
     const room = rooms.find(r => r.id === item.room);
-    setRoomState(item.room, status, room?.prevStatus || null);
+    setRoomState(item.room, status, room?.prevStatus || null, { assignmentStatus: WORK_TO_ASSIGNMENT[work] });
+    logEvent('workStatus', item.room, work);
   };
 
   const toggleRoomBlock = (roomNumber: string) => {
@@ -1988,47 +2774,83 @@ export default function HomeScreen() {
     if (getRole() !== 'governess') { notify(t.alerts.noPermission); return; }
     if (isRoomBlocked(a.room)) { notify(t.alerts.roomBlocked); return; }
     updateDoc(doc(db, 'assignments', a.id), { inspected: !a.inspected }).catch(writeFailed);
+    logEvent(a.inspected ? 'inspectionUndo' : 'inspectionOk', a.room);
   };
 
-  /* ---------- Asignación de habitaciones del día ---------- */
-  const assignDate = dateKey(addDays(new Date(), assignDayOffset));
+  /* ---------- Asignación de habitaciones: módulo ágil con selección táctil ---------- */
+  // Una habitación está asignada hoy si tiene assignedTo + assignedDate de hoy; así cada día vuelve a quedar libre.
+  const isAssignedToday = (r: { assignedTo?: string | null; assignedDate?: string | null }) => !!r.assignedTo && r.assignedDate === todayKey;
+  const unassignedRooms = rooms.filter(r => !isAssignedToday(r));
+  const assignableRooms: Record<'daily' | 'out' | 'inOut', typeof rooms> = {
+    daily: unassignedRooms.filter(r => r.status === 'daily'),
+    out: unassignedRooms.filter(r => r.status === 'checkout'),
+    inOut: unassignedRooms.filter(r => r.status === 'checkoutIn'),
+  };
+  const validSelectedCount = selectedRooms.filter(id => unassignedRooms.some(r => r.id === id)).length;
 
-  const submitAssignments = () => {
+  const toggleSelectRoom = (id: string) => {
+    setSelectedRooms(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAll = (cat: 'daily' | 'out' | 'inOut') => {
+    const ids = assignableRooms[cat].map(r => r.id);
+    const allSelected = ids.length > 0 && ids.every(id => selectedRooms.includes(id));
+    setSelectedRooms(prev => (allSelected ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
+  };
+
+  const submitAssignments = async () => {
     const role = getRole();
-    if (role !== 'governess' && role !== 'reception') { notify(t.alerts.noPermission); return; }
-    const worker = staff.find(s => s.id === assignWorkerId && s.role === 'cleaning') || staff.find(s => s.role === 'cleaning');
-    if (!worker) { notify(t.assign.noWorkers); return; }
+    if (role !== 'governess' && role !== 'reception' && role !== 'direction') { notify(t.alerts.noPermission); return; }
+    const worker = staff.find(s => s.id === assignWorkerId && s.role === 'cleaning');
+    if (!worker) { notify(t.assign.pickWorker); return; }
+    const targets = selectedRooms
+      .map(id => unassignedRooms.find(r => r.id === id))
+      .filter((r): r is (typeof rooms)[number] => !!r && !!STATUS_TO_TASKTYPE[r.status]);
+    if (!targets.length) { notify(t.assign.nothingSelected); return; }
 
-    const groups: [Assignment['taskType'], string][] = [['daily', roomsDaily], ['out', roomsOut], ['inOut', roomsInOut]];
-    const entries: { room: string; taskType: Assignment['taskType'] }[] = [];
-    const invalid: string[] = [];
-    groups.forEach(([taskType, txt]) => parseRooms(txt).forEach(r => {
-      if (!ALL_ROOM_IDS.includes(r)) invalid.push(r);
-      else entries.push({ room: r, taskType });
-    }));
-    if (invalid.length) { notify(t.assign.invalidRooms + invalid.join(', ')); return; }
-    if (!entries.length) { notify(t.assign.nothing); return; }
-
-    const batch = writeBatch(db);
-    entries.forEach(e => {
-      const id = `${assignDate}_${e.room}`;
-      const existing = assignments.find(a => a.id === id);
-      const sameWorker = existing?.staffId === worker.id;
-      batch.set(doc(db, 'assignments', id), {
-        date: assignDate, staffId: worker.id, staffName: worker.name, room: e.room, taskType: e.taskType,
-        guestName: existing?.guestName || '',
-        workStatus: sameWorker ? existing!.workStatus : 'not_started', // por defecto: aún no hecho
-        inspected: sameWorker ? !!existing!.inspected : false,
-        linen: existing?.linen || null,
-        notes: existing?.notes || [],
+    setAssignSaving(true);
+    try {
+      const batch = writeBatch(db); // una sola escritura atómica para todas las habitaciones
+      const now = Date.now();
+      targets.forEach(r => {
+        const id = `${todayKey}_${r.id}`;
+        batch.set(doc(db, 'assignments', id), {
+          date: todayKey, staffId: worker.id, staffName: worker.name, room: r.id,
+          taskType: STATUS_TO_TASKTYPE[r.status],
+          guestName: assignments.find(a => a.id === id)?.guestName || '',
+          workStatus: 'not_started', // por defecto: aún no hecho
+          inspected: false, linen: null, notes: [],
+        });
+        batch.set(doc(db, 'roomStates', r.id), {
+          status: r.status, prevStatus: r.prevStatus ?? null,
+          assignedTo: worker.id, assignedByName: worker.name, assignmentStatus: 'pending', assignedDate: todayKey,
+        }, { merge: true });
+        batch.set(doc(collection(db, 'activity')), {
+          date: todayKey, ts: now, by: session?.username || '', role, type: 'assigned', room: r.id, detail: worker.name,
+        });
       });
-    });
-    batch.commit().catch(writeFailed);
-    setRoomsDaily(''); setRoomsOut(''); setRoomsInOut('');
-    notify(t.assign.saved);
+      const commit = batch.commit();
+      commit.catch(e => console.error('Error al guardar la asignación:', e));
+      // Sin red el commit queda en cola: no bloqueamos la pantalla más de 6 s
+      await Promise.race([commit, new Promise<void>(resolve => setTimeout(resolve, 6000))]);
+      setSelectedRooms([]);
+      setAssignWorkerId(null); // listo para el siguiente empleado
+      notify(t.assign.success.replace('{name}', worker.name));
+    } catch (error) {
+      writeFailed(error);
+    } finally {
+      setAssignSaving(false);
+    }
   };
 
-  const removeAssignment = (id: string) => { deleteDoc(doc(db, 'assignments', id)).catch(writeFailed); };
+  // Quitar una asignación libera la habitación para volver a asignarla
+  const removeAssignment = (a: Assignment) => {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'assignments', a.id));
+    batch.set(doc(db, 'roomStates', a.room), { assignedTo: null, assignedByName: null, assignmentStatus: null, assignedDate: null }, { merge: true });
+    batch.commit().catch(writeFailed);
+    logEvent('unassigned', a.room, a.staffName);
+  };
   const updateGuestName = (a: Assignment, name: string) => {
     if ((a.guestName || '') === name.trim()) return;
     updateDoc(doc(db, 'assignments', a.id), { guestName: name.trim() }).catch(writeFailed);
@@ -2065,6 +2887,7 @@ export default function HomeScreen() {
     if (newTaskRequestId) {
       updateDoc(doc(db, 'supplyRequests', newTaskRequestId), { status: 'assigned', taskId: ref.id }).catch(writeFailed);
     }
+    logEvent('task', '', person ? person.name : (t.roles[selectedTargetRole]?.title || ''));
     setNewTaskText('');
     setNewTaskRequestId(null);
     setNewTaskModalVisible(false);
@@ -2074,6 +2897,7 @@ export default function HomeScreen() {
   const toggleTaskStatus = (task: TaskItem) => {
     const next = task.status === 'pending' ? 'done' : 'pending';
     updateDoc(doc(db, 'tasks', task.id), { status: next }).catch(writeFailed);
+    if (next === 'done') logEvent('taskDone', '', task.taskText.slice(0, 80));
     if (task.requestId) {
       updateDoc(doc(db, 'supplyRequests', task.requestId), { status: next === 'done' ? 'done' : 'assigned' }).catch(writeFailed);
     }
@@ -2087,6 +2911,7 @@ export default function HomeScreen() {
       author: session?.username || '', authorId: session?.staffId || '',
       status: 'open', createdAt: Date.now(),
     }).catch(writeFailed);
+    logEvent('supply', supplyFloor, supplyText.trim().slice(0, 80));
     setSupplyText('');
     setSupplyModalVisible(false);
     notify(t.supply.sent);
@@ -2120,6 +2945,7 @@ export default function HomeScreen() {
     idsInCategory.forEach(id => { delete merged[id]; });
     Object.keys(linenForm).forEach(id => { if (linenForm[id] > 0) merged[id] = linenForm[id]; });
     updateDoc(doc(db, 'assignments', item.id), { linen: merged }).catch(writeFailed);
+    logEvent('linen', item.room);
     setLinenModal(null);
     notify(t.alerts.linenSaved);
   };
@@ -2142,6 +2968,7 @@ export default function HomeScreen() {
     if (!noteText.trim()) { notify(t.cleaningView.noteEmpty); return; }
     const note: AssignmentNote = { id: uid('n'), author: session?.username || '', text: noteText.trim(), date: new Date().toISOString() };
     updateDoc(doc(db, 'assignments', infoAssignmentId), { notes: arrayUnion(note) }).catch(writeFailed);
+    logEvent('note', assignments.find(x => x.id === infoAssignmentId)?.room || '', note.text.slice(0, 80));
     setNoteText('');
     notify(t.cleaningView.noteSent);
   };
@@ -2154,6 +2981,7 @@ export default function HomeScreen() {
       room: reportModalRoom || '', text: reportText.trim(),
       author: session?.username || '', date: new Date().toISOString(),
     }).catch(writeFailed);
+    logEvent('report', reportModalRoom || '', reportText.trim().slice(0, 80));
     setReportText('');
     setReportModalRoom(null);
     notify(t.alerts.reportSent);
@@ -2232,46 +3060,131 @@ export default function HomeScreen() {
     setDoc(doc(db, 'dailyCounts', todayKey), { counts: { [itemId]: next }, updatedBy: session?.username || '' }, { merge: true }).catch(writeFailed);
   };
 
+  const openPrint = async (html: string, plain: string) => {
+    try {
+      if (PrintModule?.printAsync) {
+        await PrintModule.printAsync({ html });
+      } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.print();
+      } else {
+        await Share.share({ message: plain });
+      }
+    } catch (error: any) {
+      const msg = String(error?.message || error);
+      if (!/did not complete|cancel|dismiss/i.test(msg)) {
+        console.error('Error de impresión:', error);
+        notify(t.count.printFailed);
+      }
+    }
+  };
+
   const printDailyCount = async () => {
-    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     let grandTotal = 0;
     const sections = CATALOG_CATEGORIES.map(cat => {
       const rows = catalog.filter(c => c.category === cat && (todayCounts[c.id] || 0) > 0);
       if (!rows.length) return '';
       const subtotal = rows.reduce((sum, c) => sum + (todayCounts[c.id] || 0), 0);
       grandTotal += subtotal;
-      return `<h2>${esc(t.cleaning[cat])}</h2>
-        <table><tr><th>${esc(t.count.article)}</th><th class="n">${esc(t.count.qty)}</th></tr>
-        ${rows.map(c => `<tr><td>${esc(itemName(c))}</td><td class="n">${todayCounts[c.id]}</td></tr>`).join('')}
-        <tr class="tot"><td>${esc(t.count.total)}</td><td class="n">${subtotal}</td></tr></table>`;
+      return `<h2>${escHtml(t.cleaning[cat])}</h2>
+        <table><tr><th>${escHtml(t.count.article)}</th><th class="n">${escHtml(t.count.qty)}</th></tr>
+        ${rows.map(c => `<tr><td>${escHtml(itemName(c))}</td><td class="n">${todayCounts[c.id]}</td></tr>`).join('')}
+        <tr class="tot"><td>${escHtml(t.count.total)}</td><td class="n">${subtotal}</td></tr></table>`;
     }).join('');
 
-    const html = `<html><head><meta charset="utf-8"/>
-      <style>
-        body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 28px; color: #0F172A; }
-        h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 15px; margin: 22px 0 6px; }
-        .meta { font-size: 12px; color: #475569; margin-bottom: 6px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border-bottom: 1px solid #CBD5E1; padding: 6px 4px; text-align: left; }
-        .n { text-align: right; width: 90px; } .tot td { font-weight: bold; border-top: 2px solid #0F172A; }
-        .grand { margin-top: 18px; font-size: 15px; font-weight: bold; text-align: right; }
-      </style></head><body>
-      <h1>${esc(t.appTitle)} — ${esc(t.count.sheetTitle)}</h1>
-      <div class="meta">${esc(t.count.date)}: ${esc(todayKey)}</div>
-      <div class="meta">${esc(t.count.by)}: ${esc(session?.username || '')} · ${esc(t.count.printedAt)} ${esc(new Date().toLocaleString())}</div>
-      ${sections || `<p>${esc(t.count.none)}</p>`}
-      ${grandTotal ? `<div class="grand">${esc(t.count.total)}: ${grandTotal}</div>` : ''}
+    const html = `<html><head><meta charset="utf-8"/>${PRINT_CSS}</head><body>
+      <h1>${escHtml(t.appTitle)} — ${escHtml(t.count.sheetTitle)}</h1>
+      <div class="meta">${escHtml(t.count.date)}: ${escHtml(todayKey)}</div>
+      <div class="meta">${escHtml(t.count.by)}: ${escHtml(session?.username || '')} · ${escHtml(t.count.printedAt)} ${escHtml(new Date().toLocaleString())}</div>
+      ${sections || `<p>${escHtml(t.count.none)}</p>`}
+      ${grandTotal ? `<div class="grand">${escHtml(t.count.total)}: ${grandTotal}</div>` : ''}
       </body></html>`;
 
-    try {
-      await Print.printAsync({ html });
-    } catch (error: any) {
-      const msg = String(error?.message || error);
-      if (!/did not complete|cancel/i.test(msg)) {
-        console.error('Error de impresión:', error);
-        notify(t.count.printFailed);
-      }
-    }
+    const plain = [
+      `${t.appTitle} — ${t.count.sheetTitle}`,
+      `${t.count.date}: ${todayKey}`,
+      `${t.count.by}: ${session?.username || ''} · ${t.count.printedAt} ${new Date().toLocaleString()}`,
+      '',
+      ...CATALOG_CATEGORIES.flatMap(cat => {
+        const rows = catalog.filter(c => c.category === cat && (todayCounts[c.id] || 0) > 0);
+        return rows.length ? [t.cleaning[cat], ...rows.map(c => `  ${itemName(c)}: ${todayCounts[c.id]}`), ''] : [];
+      }),
+      grandTotal ? `${t.count.total}: ${grandTotal}` : t.count.none,
+    ].join('\n');
+
+    await openPrint(html, plain);
+  };
+
+  /* ---------- Resumen total del día (Gobernante / Dirección): todo lo ocurrido en todas las categorías ---------- */
+  const printDaySummary = async () => {
+    const stamp = new Date().toLocaleString();
+    const sameDay = (iso: string) => !!iso && dateKey(new Date(iso)) === todayKey;
+    const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const statusName = (s: string) => t.mapView.status[s] || s;
+    const events = activityCol.items.filter(e => e.date === todayKey).sort((a, b) => a.ts - b.ts);
+    const describe = (e: ActivityEvent) => {
+      const tpl: string = t.activity[e.type] || e.type;
+      const detail = e.type === 'roomStatus' ? statusName(e.detail) : e.type === 'workStatus' ? workLabel(e.detail) : e.detail;
+      return tpl.replace('{room}', e.room).replace('{detail}', detail).replace('{by}', e.by);
+    };
+    const table = (heads: string[], rows: string[][]) => rows.length
+      ? `<table><tr>${heads.map(h => `<th>${escHtml(h)}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td>${escHtml(c)}</td>`).join('')}</tr>`).join('')}</table>`
+      : `<p class="none">${escHtml(t.summary.none)}</p>`;
+    const section = (title: string, body: string) => `<h2>${escHtml(title)}</h2>${body}`;
+    const statusKeys = [...STATUS_KEYS, 'cleaning'];
+
+    const roomRows = statusKeys.map(k => {
+      const list = rooms.filter(r => r.status === k).map(r => r.id);
+      return [statusName(k), String(list.length), list.join(', ') || '—'];
+    });
+    const assignmentRows = todayAssignments.map(a => [
+      a.room, t.dashboard.taskTypes[a.taskType] || a.taskType, a.staffName, workLabel(a.workStatus),
+      a.guestName || '—', a.inspected ? t.summary.yes : t.summary.no, summarizeLinen(a.linen) || '—',
+      (a.notes || []).map(n => `${n.author}: ${n.text}`).join(' | ') || '—',
+    ]);
+    const taskRows = governessTasks
+      .filter(k => k.status === 'pending' || (k.createdAt && dateKey(new Date(k.createdAt)) === todayKey))
+      .map(k => [
+        `${k.targetName ? k.targetName + ' · ' : ''}${t.roles[k.targetRole]?.title || ''}`, k.taskText,
+        k.status === 'done' ? t.dashboard.completed : t.dashboard.pending,
+      ]);
+    const supplyStatus = (s: string) => (s === 'done' ? t.supply.done : s === 'assigned' ? t.supply.assigned : t.supply.open);
+    const supplyRows = supplyRequests
+      .filter(r => r.status !== 'done' || dateKey(new Date(r.createdAt)) === todayKey)
+      .map(r => [r.floor, r.text, r.author, supplyStatus(r.status)]);
+    const reportRows = reports.filter(r => sameDay(r.date)).map(r => [r.room, r.text, r.author, new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })]);
+    const countRows = catalog.filter(c => (todayCounts[c.id] || 0) > 0).map(c => [itemName(c), String(todayCounts[c.id])]);
+    const scheduleRows = staff.filter(s => schedule[`${s.id}|${todayKey}`]).map(s => [s.name, s.position || t.roles[s.role]?.title || '', schedule[`${s.id}|${todayKey}`]]);
+
+    const html = `<html><head><meta charset="utf-8"/>${PRINT_CSS}</head><body>
+      <h1>${escHtml(t.appTitle)} — ${escHtml(t.summary.title)}</h1>
+      <div class="meta">${escHtml(t.count.date)}: ${escHtml(todayKey)} · ${escHtml(t.count.printedAt)} ${escHtml(stamp)}</div>
+      <div class="meta">${escHtml(t.summary.by)}: ${escHtml(session?.username || '')} (${escHtml(t.roles[session?.role || '']?.title || '')})</div>
+      ${section(t.summary.timeline, table([t.summary.time, t.summary.event], events.map(e => [fmtTime(e.ts), describe(e)])))}
+      ${section(t.summary.rooms, table([t.summary.status, '#', t.common.room], roomRows))}
+      ${section(t.summary.assignments, table([t.common.room, t.summary.service, t.assign.worker, t.summary.status, t.dashboard.guestLabel.replace(/[:：]\s*$/, ''), t.summary.inspected, t.summary.linen, t.summary.notes], assignmentRows))}
+      ${section(t.summary.tasks, table([t.tasks.person, t.summary.task, t.summary.status], taskRows))}
+      ${section(t.summary.supply, table([t.summary.floor, t.summary.text, t.summary.by, t.summary.status], supplyRows))}
+      ${section(t.summary.reports, table([t.common.room, t.summary.text, t.summary.by, t.summary.time], reportRows))}
+      ${section(t.summary.counts, table([t.count.article, t.count.qty], countRows))}
+      ${section(t.summary.schedule, table([t.staff.name, t.summary.role, t.summary.shift], scheduleRows))}
+      </body></html>`;
+
+    const plain = [
+      `${t.appTitle} — ${t.summary.title}`,
+      `${t.count.date}: ${todayKey} · ${t.count.printedAt} ${stamp}`,
+      `${t.summary.by}: ${session?.username || ''}`,
+      '',
+      t.summary.timeline,
+      ...(events.length ? events.map(e => `  ${fmtTime(e.ts)}  ${describe(e)}`) : [`  ${t.summary.none}`]),
+      '',
+      t.summary.assignments,
+      ...(assignmentRows.length ? assignmentRows.map(r => `  ${t.common.room} ${r[0]} · ${r[1]} · ${r[2]} · ${r[3]}`) : [`  ${t.summary.none}`]),
+      '',
+      t.summary.counts,
+      ...(countRows.length ? countRows.map(r => `  ${r[0]}: ${r[1]}`) : [`  ${t.summary.none}`]),
+    ].join('\n');
+
+    await openPrint(html, plain);
   };
 
   /* ---------- Planning (horarios escritos, en Firestore) ---------- */
@@ -2515,14 +3428,14 @@ export default function HomeScreen() {
     const isGoverness = roleKey === 'governess';
     const isReception = roleKey === 'reception';
     const canEditPlanning = isDirection || isGoverness;
-    const canAssign = isGoverness || isReception;
+    const canAssign = isGoverness || isReception || isDirection;
 
     // Pestañas por perfil (Ajustes en todos)
     const settingsTab = { id: 'settings', label: t.feed.tabSettings };
     const assignTab = { id: 'assign', label: t.feed.tabAssign };
     let tabs: { id: string; label: string }[] = [];
     if (isDirection) tabs = [
-      { id: 'dashboard', label: t.feed.tabDashboard }, { id: 'map', label: t.feed.tabMap },
+      { id: 'dashboard', label: t.feed.tabDashboard }, assignTab, { id: 'map', label: t.feed.tabMap },
       { id: 'planning', label: t.feed.tabPlanning }, { id: 'staff', label: t.feed.tabStaff }, settingsTab,
     ];
     else if (isGoverness) tabs = [
@@ -2550,16 +3463,20 @@ export default function HomeScreen() {
     const requestStatusLabel = (s: string) => (s === 'done' ? t.supply.done : s === 'assigned' ? t.supply.assigned : t.supply.open);
     const requestStatusColor = (s: string) => (s === 'done' ? '#10B981' : s === 'assigned' ? '#0284C7' : '#F59E0B');
 
-    /* ----- Plano del hotel ----- */
+    /* ----- Plano del hotel (colores fijos: verde salida · azul libre y limpia · rojo salida/check-in · blanco limpieza diaria · negro bloqueada) ----- */
     const renderMap = () => {
-      const swap = isDirection;
       const canEditRooms = isReception || isGoverness;
       const floorsList = FLOORS.map(f => f.f);
-      const circle = (r: any) => (
-        <RoomCircle key={r.id} id={r.id} status={r.status} color={statusColor(r.status, swap)} onPress={canEditRooms ? () => setStatusModalRoom(r) : undefined} />
-      );
+      const anyCleaning = rooms.some(r => r.status === 'cleaning');
+      const legendKeys = anyCleaning ? [...STATUS_KEYS, 'cleaning'] : STATUS_KEYS;
       const dot = (s: string) => (
-        <View style={[styles.legendDot, { backgroundColor: statusColor(s, swap), borderColor: s === 'daily' ? '#94A3B8' : statusColor(s, swap) }]} />
+        <View style={[styles.legendDot, { backgroundColor: statusColor(s), borderColor: s === 'daily' ? '#94A3B8' : statusColor(s) }]} />
+      );
+      const circle = (r: any, showWorker: boolean) => (
+        <View key={r.id} style={{ alignItems: 'center' }}>
+          <RoomCircle id={r.id} status={r.status} color={statusColor(r.status)} onPress={canEditRooms ? () => setStatusModalRoom(r) : undefined} />
+          {showWorker && isAssignedToday(r) && <Text style={styles.roomWorker} numberOfLines={1}>{r.assignedByName}</Text>}
+        </View>
       );
 
       return (
@@ -2570,7 +3487,7 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.legendRow}>
-            {STATUS_KEYS.map(s => (
+            {legendKeys.map(s => (
               <View key={s} style={styles.legendItem}>
                 {dot(s)}
                 <Text style={styles.legendText}>{t.mapView.status[s]}</Text>
@@ -2591,7 +3508,7 @@ export default function HomeScreen() {
               <View key={floor} style={styles.floorSectionBox}>
                 <Text style={styles.floorTitle}>🏢 {t.mapView.floor}: {floor}</Text>
                 <View style={styles.circleGrid}>
-                  {rooms.filter(r => r.floor === floor).map(circle)}
+                  {rooms.filter(r => r.floor === floor).map(r => circle(r, false))}
                 </View>
               </View>
             ))
@@ -2608,7 +3525,7 @@ export default function HomeScreen() {
                         <Text style={styles.statusHeaderText}>{t.mapView.status[s]} ({list.length})</Text>
                       </View>
                       {list.length > 0 ? (
-                        <View style={styles.circleGrid}>{list.map(circle)}</View>
+                        <View style={styles.circleGrid}>{list.map(r => circle(r, true))}</View>
                       ) : (
                         <Text style={styles.emptyText}>{t.mapView.empty}</Text>
                       )}
@@ -2621,6 +3538,12 @@ export default function HomeScreen() {
         </View>
       );
     };
+
+    const renderSummaryButton = () => (
+      <TouchableOpacity style={[styles.actionFeedButton, { backgroundColor: '#0F172A', marginBottom: 12 }]} onPress={printDaySummary}>
+        <Text style={styles.actionFeedButtonText}>{t.summary.button}</Text>
+      </TouchableOpacity>
+    );
 
     /* ----- Planning: horarios escritos y editables por trabajador ----- */
     const renderPlanning = () => {
@@ -2705,29 +3628,20 @@ export default function HomeScreen() {
       );
     };
 
-    /* ----- Asignación de habitaciones del día (gobernante / recepción) ----- */
+    /* ----- Asignación de habitaciones: personal → categoría → habitaciones sin asignar ----- */
     const renderAssign = () => {
       const cleaners = staff.filter(s => s.role === 'cleaning');
-      const selectedWorker = assignWorkerId && cleaners.some(c => c.id === assignWorkerId) ? assignWorkerId : (cleaners[0]?.id || null);
-      const dayList = assignments.filter(a => a.date === assignDate);
+      const worker = cleaners.find(c => c.id === assignWorkerId) || null;
+      const catRooms = assignableRooms[assignCategory];
+      const allSelected = catRooms.length > 0 && catRooms.every(r => selectedRooms.includes(r.id));
+      const dayList = assignments.filter(a => a.date === todayKey);
       const byWorker: Record<string, Assignment[]> = {};
       dayList.forEach(a => { (byWorker[a.staffName || '—'] = byWorker[a.staffName || '—'] || []).push(a); });
-      const dayLabel = assignDayOffset === 0
-        ? `${t.assign.today} · ${assignDate}`
-        : new Date(`${assignDate}T00:00:00`).toLocaleDateString();
-
-      const roomInput = (label: string, color: string, value: string, setter: (v: string) => void) => (
-        <View style={{ marginBottom: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <View style={[styles.legendDot, { backgroundColor: color, borderColor: color }]} />
-            <Text style={styles.inputLabel}>{label}</Text>
-          </View>
-          <TextInput
-            style={styles.input} placeholder={t.assign.roomsPH} placeholderTextColor="#64748B"
-            autoCapitalize="characters" autoCorrect={false} value={value} onChangeText={setter}
-          />
-        </View>
-      );
+      const categories: { key: 'daily' | 'out' | 'inOut'; label: string; color: string }[] = [
+        { key: 'daily', label: t.assign.daily, color: TASK_TYPE_COLORS.daily },
+        { key: 'out', label: t.assign.out, color: TASK_TYPE_COLORS.out },
+        { key: 'inOut', label: t.assign.inOut, color: TASK_TYPE_COLORS.inOut },
+      ];
 
       return (
         <View style={styles.feedCard}>
@@ -2738,43 +3652,73 @@ export default function HomeScreen() {
 
           <View style={styles.hintBox}><Text style={styles.hintText}>{t.assign.howto}</Text></View>
 
-          <View style={styles.dayNav}>
-            <TouchableOpacity style={styles.monthArrow} onPress={() => setAssignDayOffset(v => v - 1)}><Text style={styles.monthArrowText}>◀</Text></TouchableOpacity>
-            <Text style={styles.monthLabel}>{dayLabel}</Text>
-            <TouchableOpacity style={styles.monthArrow} onPress={() => setAssignDayOffset(v => v + 1)}><Text style={styles.monthArrowText}>▶</Text></TouchableOpacity>
-          </View>
-
+          {/* Paso 1: personal de limpieza */}
           <View style={styles.sectionBox}>
-            <Text style={styles.sectionTitle}>{t.assign.worker}</Text>
+            <Text style={styles.sectionTitle}>{t.assign.step1}</Text>
             {cleaners.length === 0 ? (
               <Text style={styles.emptyText}>{t.assign.noWorkers}</Text>
             ) : (
               <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
                 {cleaners.map(c => (
-                  <TouchableOpacity key={c.id} style={[styles.personChip, selectedWorker === c.id && styles.personChipActive]} onPress={() => setAssignWorkerId(c.id)}>
-                    <Text style={[styles.deptPillText, selectedWorker === c.id && styles.deptPillTextActive]}>{c.name}</Text>
+                  <TouchableOpacity key={c.id} style={[styles.personChip, worker?.id === c.id && styles.personChipActive]} onPress={() => setAssignWorkerId(c.id)}>
+                    <Text style={[styles.deptPillText, worker?.id === c.id && styles.deptPillTextActive]}>👤 {c.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
-
-            {roomInput(t.assign.daily, TASK_TYPE_COLORS.daily, roomsDaily, setRoomsDaily)}
-            {roomInput(t.assign.out, TASK_TYPE_COLORS.out, roomsOut, setRoomsOut)}
-            {roomInput(t.assign.inOut, TASK_TYPE_COLORS.inOut, roomsInOut, setRoomsInOut)}
-
-            <TouchableOpacity style={[styles.actionFeedButton, { backgroundColor: '#5b21b6' }]} onPress={submitAssignments}>
-              <Text style={styles.actionFeedButtonText}>{t.assign.add}</Text>
-            </TouchableOpacity>
           </View>
 
+          {/* Paso 2: solo habitaciones aún sin asignar hoy, por categoría */}
+          <View style={styles.sectionBox}>
+            <Text style={styles.sectionTitle}>{t.assign.step2}</Text>
+            <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
+              {categories.map(c => (
+                <TouchableOpacity
+                  key={c.key}
+                  style={[styles.deptPill, { minWidth: 100 }, assignCategory === c.key && { backgroundColor: c.color, borderColor: c.color }]}
+                  onPress={() => setAssignCategory(c.key)}
+                >
+                  <Text style={[styles.deptPillText, assignCategory === c.key && styles.deptPillTextActive]} numberOfLines={2}>
+                    {c.label} ({assignableRooms[c.key].length})
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {catRooms.length === 0 ? (
+              <Text style={styles.emptyText}>{t.assign.noRooms}</Text>
+            ) : (
+              <>
+                <TouchableOpacity style={[styles.presetChip, { alignSelf: 'flex-start', marginBottom: 10 }]} onPress={() => toggleSelectAll(assignCategory)}>
+                  <Text style={styles.presetChipText}>{allSelected ? t.assign.deselectAll : t.assign.selectAll}</Text>
+                </TouchableOpacity>
+                <View style={styles.circleGrid}>
+                  {catRooms.map(r => {
+                    const sel = selectedRooms.includes(r.id);
+                    return (
+                      <TouchableOpacity key={r.id} style={[styles.roomPick, sel && styles.roomPickSel]} onPress={() => toggleSelectRoom(r.id)}>
+                        <Text style={[styles.roomPickText, sel && { color: '#FFFFFF' }]}>{sel ? '✓ ' : ''}{r.id}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <Text style={styles.assignCounter}>
+              {t.assign.selected.replace('{n}', String(validSelectedCount)).replace('{name}', worker?.name || '—')}
+            </Text>
+          </View>
+
+          {/* Asignaciones de hoy (compartidas en tiempo real con recepción y gobernante) */}
           <View style={styles.sectionBox}>
             <Text style={styles.sectionTitle}>{t.assign.listTitle} ({dayList.length})</Text>
             {dayList.length === 0 && <Text style={styles.emptyText}>{t.assign.empty}</Text>}
-            {Object.keys(byWorker).map(worker => (
-              <View key={worker} style={{ marginBottom: 10 }}>
-                <Text style={styles.floorTitle}>👤 {worker} ({byWorker[worker].length})</Text>
+            {Object.keys(byWorker).map(name => (
+              <View key={name} style={{ marginBottom: 10 }}>
+                <Text style={styles.floorTitle}>👤 {name} ({byWorker[name].length})</Text>
                 <View style={styles.roomsNotesList}>
-                  {byWorker[worker].map(a => (
+                  {byWorker[name].map(a => (
                     <View key={a.id} style={[styles.roomNoteRow, { borderLeftColor: TASK_TYPE_COLORS[a.taskType] }]}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.noteRoomNum}>{t.common.room} {a.room} · {taskTypeLabel(a.taskType)}</Text>
@@ -2785,7 +3729,7 @@ export default function HomeScreen() {
                           defaultValue={a.guestName || ''} onEndEditing={e => updateGuestName(a, e.nativeEvent.text)}
                         />
                       </View>
-                      <TouchableOpacity style={styles.deleteBtn} onPress={() => removeAssignment(a.id)}>
+                      <TouchableOpacity style={styles.deleteBtn} onPress={() => removeAssignment(a)}>
                         <Text style={styles.deleteBtnText}>✕</Text>
                       </TouchableOpacity>
                     </View>
@@ -3253,14 +4197,14 @@ export default function HomeScreen() {
       </View>
     );
 
-    const occupiedCount = rooms.filter(r => r.status === 'occupied' || r.status === 'daily').length;
+    const occupiedCount = rooms.filter(r => r.status === 'daily').length;
     const occupancyPct = rooms.length ? Math.round((occupiedCount / rooms.length) * 100) : 0;
     const blockedCount = rooms.filter(r => r.status === 'blocked').length;
     const movementsCount = todayAssignments.filter(a => a.taskType !== 'daily').length;
 
     return (
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.feedContainer} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.feedContainer, activeTab === 'assign' && canAssign && { paddingBottom: 120 }]} keyboardShouldPersistTaps="handled">
           {renderLangBar()}
           {renderOfflineBanner()}
 
@@ -3282,7 +4226,7 @@ export default function HomeScreen() {
           {/* Línea verde pequeña: usuario en línea (gris si no hay red) */}
           <View style={[styles.onlineBar, showOffline && styles.onlineBarOff]}>
             <View style={[styles.onlineDot, showOffline && { backgroundColor: '#94A3B8' }]} />
-            <Text style={[styles.onlineText, showOffline && { color: '#475569' }]}>{showOffline ? 'Offline' : t.feed.online}</Text>
+            <Text style={[styles.onlineText, showOffline && { color: '#475569' }]}>{showOffline ? t.offline.label : t.feed.online}</Text>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={styles.tabsRow}>
@@ -3329,6 +4273,8 @@ export default function HomeScreen() {
                   <View style={styles.generalStatusBox}>
                     <Text style={styles.generalStatusText}>{t.dashboard.opsStatus}</Text>
                   </View>
+                  <View style={{ height: 10 }} />
+                  {renderSummaryButton()}
                 </View>
               )}
 
@@ -3337,6 +4283,8 @@ export default function HomeScreen() {
                 <View style={styles.sectionBox}>
                   <Text style={styles.sectionTitle}>{t.dashboard.governessTitle}</Text>
                   <Text style={styles.directionSubText}>{t.dashboard.governessSub}</Text>
+
+                  {renderSummaryButton()}
 
                   {renderInspection()}
 
@@ -3449,6 +4397,19 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
+        {/* Botón de acción fijo en la parte inferior (asignación de habitaciones) */}
+        {activeTab === 'assign' && canAssign && (
+          <View style={styles.fixedBar}>
+            <TouchableOpacity
+              style={[styles.fixedBarBtn, { opacity: assignSaving || validSelectedCount === 0 ? 0.6 : 1 }]}
+              onPress={submitAssignments}
+              disabled={assignSaving}
+            >
+              {assignSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.fixedBarBtnText}>{t.assign.save}</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ===== MODAL: cambiar estado de habitación (plano) ===== */}
         <Modal visible={!!statusModalRoom} animationType="fade" transparent={true} onRequestClose={() => setStatusModalRoom(null)}>
           <View style={styles.modalOverlay}>
@@ -3461,7 +4422,7 @@ export default function HomeScreen() {
                     style={[styles.workMenuItem, statusModalRoom?.status === s && styles.workMenuItemActive]}
                     onPress={() => { applyRoomStatus(statusModalRoom.id, s); setStatusModalRoom(null); }}
                   >
-                    <View style={[styles.legendDot, { backgroundColor: statusColor(s, isDirection), borderColor: s === 'daily' ? '#94A3B8' : statusColor(s, isDirection) }]} />
+                    <View style={[styles.legendDot, { backgroundColor: statusColor(s), borderColor: s === 'daily' ? '#94A3B8' : statusColor(s) }]} />
                     <Text style={styles.workMenuText}>{t.mapView.status[s]}</Text>
                   </TouchableOpacity>
                 ))}
@@ -4175,6 +5136,16 @@ const styles = StyleSheet.create({
   linkText: { color: '#0284C7', fontSize: 12.5, fontWeight: '700', textAlign: 'center', marginTop: 12 },
   presetChip: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: '#E0F2FE', borderWidth: 1, borderColor: '#BAE6FD' },
   presetChipText: { fontSize: 11.5, fontWeight: 'bold', color: '#0369A1' },
+
+  // Plano y asignación
+  roomWorker: { fontSize: 9, color: '#475569', maxWidth: 56, textAlign: 'center', marginTop: 2, fontWeight: '600' },
+  roomPick: { minWidth: 68, height: 46, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1.5, borderColor: '#CBD5E1', backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
+  roomPickSel: { backgroundColor: '#5b21b6', borderColor: '#5b21b6' },
+  roomPickText: { fontSize: 15, fontWeight: 'bold', color: '#0F172A' },
+  assignCounter: { marginTop: 12, fontSize: 13, fontWeight: '700', color: '#5b21b6' },
+  fixedBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: 'rgba(224,242,254,0.97)', borderTopWidth: 1, borderTopColor: '#BAE6FD' },
+  fixedBarBtn: { backgroundColor: '#5b21b6', paddingVertical: 15, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
+  fixedBarBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 
   // Utensilios
   invRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
