@@ -27,6 +27,23 @@ try {
   PrintModule = null;
 }
 
+/* expo-file-system y expo-sharing también son opcionales (npx expo install expo-file-system expo-sharing):
+   solo se usan para compartir la hoja del día como archivo Word. */
+let FileModule: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  FileModule = require('expo-file-system');
+} catch {
+  FileModule = null;
+}
+let SharingModule: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  SharingModule = require('expo-sharing');
+} catch {
+  SharingModule = null;
+}
+
 /* ============================================================
    TIPOS
    ============================================================ */
@@ -49,6 +66,8 @@ interface TaskItem {
   taskText: string;
   status: 'pending' | 'done';
   requestId?: string;
+  kind?: 'daily' | 'special' | 'routine';
+  createdBy?: 'self' | 'governess';
   createdAt?: number;
 }
 interface ReportItem {
@@ -87,7 +106,7 @@ interface RoomState {
   assignedDate?: string | null;
 }
 interface ActivityEvent { id: string; date: string; ts: number; by: string; role: string; type: string; room: string; detail: string }
-interface ScheduleEntry { id: string; staffId: string; date: string; text: string }
+interface ScheduleEntry { id: string; staffId: string; date: string; text: string; absence?: 'sick' }
 interface SupplyRequest {
   id: string;
   floor: string;
@@ -1146,15 +1165,18 @@ const deepMerge = (base: any, over: any): any => {
 // ES (base) → idioma elegido; las claves que falten caen en ES
 const buildT = (lang: string): any => {
   const es = deepMerge(
-    deepMerge(deepMerge(translations.es, extraTranslations.es), extraTranslations2.es),
-    extraTranslations3.es
+    deepMerge(deepMerge(deepMerge(translations.es, extraTranslations.es), extraTranslations2.es), extraTranslations3.es),
+    extraTranslations4.es
   );
   const sel = deepMerge(
     deepMerge(
-      deepMerge(deepMerge(translations[lang] || {}, extraTranslations[lang] || {}), extraTranslations2[lang] || {}),
-      langPack[lang] || {}
+      deepMerge(
+        deepMerge(deepMerge(translations[lang] || {}, extraTranslations[lang] || {}), extraTranslations2[lang] || {}),
+        langPack[lang] || {}
+      ),
+      extraTranslations3[lang] || {}
     ),
-    extraTranslations3[lang] || {}
+    extraTranslations4[lang] || {}
   );
   return deepMerge(es, sel);
 };
@@ -1200,6 +1222,11 @@ const statusColor = (status: string) => STATUS_COLORS[status] || STATUS_COLORS.r
 // Estado del plano ↔ tipo de servicio de limpieza
 const STATUS_TO_TASKTYPE: Record<string, 'daily' | 'out' | 'inOut'> = { daily: 'daily', checkout: 'out', checkoutIn: 'inOut' };
 const TASKTYPE_TO_STATUS: Record<string, string> = { daily: 'daily', out: 'checkout', inOut: 'checkoutIn' };
+// Cada trabajador de limpieza se distingue por color y símbolo (evitan el verde, azul y rojo de las categorías)
+const WORKER_STYLES = [
+  { color: '#7C3AED', symbol: '●' }, { color: '#DB2777', symbol: '■' }, { color: '#0F766E', symbol: '▲' },
+  { color: '#EA580C', symbol: '◆' }, { color: '#92400E', symbol: '★' }, { color: '#334155', symbol: '✚' },
+];
 const WORK_TO_ASSIGNMENT: Record<string, 'pending' | 'in_progress' | 'completed'> = { not_started: 'pending', in_progress: 'in_progress', done: 'completed' };
 
 const WORK_KEYS = ['not_started', 'in_progress', 'done'];
@@ -2331,6 +2358,189 @@ const langPack: Record<string, any> = {
   }
 };
 
+/* ============================================================
+   TEXTOS NUEVOS (cuarta tanda, 7 idiomas): horarios personalizados y
+   falta/enfermedad, Word y reinicio del conteo, tareas del equipier
+   y ayuda de la asignación con varios trabajadores.
+   ============================================================ */
+const extraTranslations4: Record<string, any> = {
+  es: {
+    activity: { absence: 'Falta por enfermedad: {detail} ({by})' },
+    planningEdit: {
+      sick: 'Falta · Enfermedad', sickBtn: '🤒 Marcar falta / enfermedad',
+      customize: '⭐ Guardar como horario personalizado', customs: 'Mis horarios personalizados',
+      customSaved: '✅ Horario personalizado guardado.', customEmpty: 'Escribe primero el horario que quieres guardar.',
+      presets: 'Horarios rápidos'
+    },
+    count: {
+      word: '📄 Compartir en Word', reset: '♻️ Reiniciar conteo', resetTitle: '¿Reiniciar el conteo de hoy?',
+      resetMsg: 'Todos los artículos contados hoy volverán a cero. Esta acción no se puede deshacer.',
+      resetOk: 'Sí, reiniciar', resetDone: '✅ Conteo reiniciado.', wordFailed: 'No se pudo preparar el documento Word.'
+    },
+    tasks: {
+      kinds: { daily: 'Tarea del día', special: 'Tarea especial', routine: 'Mantenimiento cotidiano' },
+      kind: 'Tipo de tarea', fromGoverness: 'Asignada por la gobernante', own: 'Añadida por ti'
+    },
+    equipierTasks: {
+      title: '📋 Tareas del día',
+      sub: 'Añade las tareas que vas a realizar hoy. La gobernante también puede asignarte tareas especiales o de mantenimiento cotidiano.',
+      newTitle: 'Nueva tarea del día', add: 'Añadir tarea', placeholder: 'Ej: Reponer toallas en la planta 2',
+      empty: 'Sin tareas por hoy.', added: '✅ Tarea añadida.', textEmpty: 'Escribe la tarea.'
+    },
+    assign: { multiHint: 'Puedes elegir habitaciones para varios trabajadores antes de guardar: cada persona tiene su propio color y símbolo.' }
+  },
+  en: {
+    activity: { absence: 'Sick-leave absence: {detail} ({by})' },
+    planningEdit: {
+      sick: 'Absent · Sick', sickBtn: '🤒 Mark absence / sick leave',
+      customize: '⭐ Save as custom schedule', customs: 'My custom schedules',
+      customSaved: '✅ Custom schedule saved.', customEmpty: 'First write the schedule you want to save.',
+      presets: 'Quick schedules'
+    },
+    count: {
+      word: '📄 Share as Word', reset: '♻️ Reset count', resetTitle: 'Reset today’s count?',
+      resetMsg: 'All items counted today will go back to zero. This cannot be undone.',
+      resetOk: 'Yes, reset', resetDone: '✅ Count reset.', wordFailed: 'The Word document could not be prepared.'
+    },
+    tasks: {
+      kinds: { daily: 'Daily task', special: 'Special task', routine: 'Routine maintenance' },
+      kind: 'Task type', fromGoverness: 'Assigned by the head housekeeper', own: 'Added by you'
+    },
+    equipierTasks: {
+      title: '📋 Today’s tasks',
+      sub: 'Add the tasks you will do today. The head housekeeper can also assign you special or routine maintenance tasks.',
+      newTitle: 'New task for today', add: 'Add task', placeholder: 'E.g.: Restock towels on floor 2',
+      empty: 'No tasks for today.', added: '✅ Task added.', textEmpty: 'Write the task.'
+    },
+    assign: { multiHint: 'You can pick rooms for several workers before saving: each person has their own color and symbol.' }
+  },
+  fr: {
+    activity: { absence: 'Absence pour maladie : {detail} ({by})' },
+    planningEdit: {
+      sick: 'Absence · Maladie', sickBtn: '🤒 Marquer absence / maladie',
+      customize: '⭐ Enregistrer comme horaire personnalisé', customs: 'Mes horaires personnalisés',
+      customSaved: '✅ Horaire personnalisé enregistré.', customEmpty: 'Écrivez d’abord l’horaire à enregistrer.',
+      presets: 'Horaires rapides'
+    },
+    count: {
+      word: '📄 Partager en Word', reset: '♻️ Réinitialiser le comptage', resetTitle: 'Réinitialiser le comptage du jour ?',
+      resetMsg: 'Tous les articles comptés aujourd’hui repasseront à zéro. Cette action est irréversible.',
+      resetOk: 'Oui, réinitialiser', resetDone: '✅ Comptage réinitialisé.', wordFailed: 'Impossible de préparer le document Word.'
+    },
+    tasks: {
+      kinds: { daily: 'Tâche du jour', special: 'Tâche spéciale', routine: 'Maintenance courante' },
+      kind: 'Type de tâche', fromGoverness: 'Assignée par la gouvernante', own: 'Ajoutée par vous'
+    },
+    equipierTasks: {
+      title: '📋 Tâches du jour',
+      sub: 'Ajoutez les tâches que vous ferez aujourd’hui. La gouvernante peut aussi vous assigner des tâches spéciales ou de maintenance courante.',
+      newTitle: 'Nouvelle tâche du jour', add: 'Ajouter la tâche', placeholder: 'Ex : Réapprovisionner les serviettes à l’étage 2',
+      empty: 'Aucune tâche pour aujourd’hui.', added: '✅ Tâche ajoutée.', textEmpty: 'Écrivez la tâche.'
+    },
+    assign: { multiHint: 'Vous pouvez choisir des chambres pour plusieurs agents avant d’enregistrer : chaque personne a sa propre couleur et son symbole.' }
+  },
+  it: {
+    activity: { absence: 'Assenza per malattia: {detail} ({by})' },
+    planningEdit: {
+      sick: 'Assenza · Malattia', sickBtn: '🤒 Segna assenza / malattia',
+      customize: '⭐ Salva come orario personalizzato', customs: 'I miei orari personalizzati',
+      customSaved: '✅ Orario personalizzato salvato.', customEmpty: 'Scrivi prima l’orario da salvare.',
+      presets: 'Orari rapidi'
+    },
+    count: {
+      word: '📄 Condividi in Word', reset: '♻️ Azzera conteggio', resetTitle: 'Azzerare il conteggio di oggi?',
+      resetMsg: 'Tutti gli articoli conteggiati oggi torneranno a zero. Questa azione non si può annullare.',
+      resetOk: 'Sì, azzera', resetDone: '✅ Conteggio azzerato.', wordFailed: 'Impossibile preparare il documento Word.'
+    },
+    tasks: {
+      kinds: { daily: 'Attività del giorno', special: 'Attività speciale', routine: 'Manutenzione ordinaria' },
+      kind: 'Tipo di attività', fromGoverness: 'Assegnata dalla governante', own: 'Aggiunta da te'
+    },
+    equipierTasks: {
+      title: '📋 Attività del giorno',
+      sub: 'Aggiungi le attività che svolgerai oggi. La governante può anche assegnarti attività speciali o di manutenzione ordinaria.',
+      newTitle: 'Nuova attività del giorno', add: 'Aggiungi attività', placeholder: 'Es.: Rifornire gli asciugamani al piano 2',
+      empty: 'Nessuna attività per oggi.', added: '✅ Attività aggiunta.', textEmpty: 'Scrivi l’attività.'
+    },
+    assign: { multiHint: 'Puoi scegliere camere per più addetti prima di salvare: ogni persona ha il proprio colore e simbolo.' }
+  },
+  pt: {
+    activity: { absence: 'Falta por doença: {detail} ({by})' },
+    planningEdit: {
+      sick: 'Falta · Doença', sickBtn: '🤒 Marcar falta / doença',
+      customize: '⭐ Salvar como horário personalizado', customs: 'Meus horários personalizados',
+      customSaved: '✅ Horário personalizado salvo.', customEmpty: 'Escreva primeiro o horário que deseja salvar.',
+      presets: 'Horários rápidos'
+    },
+    count: {
+      word: '📄 Compartilhar em Word', reset: '♻️ Reiniciar contagem', resetTitle: 'Reiniciar a contagem de hoje?',
+      resetMsg: 'Todos os artigos contados hoje voltarão a zero. Esta ação não pode ser desfeita.',
+      resetOk: 'Sim, reiniciar', resetDone: '✅ Contagem reiniciada.', wordFailed: 'Não foi possível preparar o documento Word.'
+    },
+    tasks: {
+      kinds: { daily: 'Tarefa do dia', special: 'Tarefa especial', routine: 'Manutenção rotineira' },
+      kind: 'Tipo de tarefa', fromGoverness: 'Atribuída pela governanta', own: 'Adicionada por você'
+    },
+    equipierTasks: {
+      title: '📋 Tarefas do dia',
+      sub: 'Adicione as tarefas que fará hoje. A governanta também pode atribuir tarefas especiais ou de manutenção rotineira.',
+      newTitle: 'Nova tarefa do dia', add: 'Adicionar tarefa', placeholder: 'Ex.: Repor toalhas no andar 2',
+      empty: 'Sem tarefas para hoje.', added: '✅ Tarefa adicionada.', textEmpty: 'Escreva a tarefa.'
+    },
+    assign: { multiHint: 'Você pode escolher quartos para vários funcionários antes de salvar: cada pessoa tem sua própria cor e símbolo.' }
+  },
+  ru: {
+    activity: { absence: 'Отсутствие по болезни: {detail} ({by})' },
+    planningEdit: {
+      sick: 'Отсутствие · Болезнь', sickBtn: '🤒 Отметить отсутствие / болезнь',
+      customize: '⭐ Сохранить как свой график', customs: 'Мои графики',
+      customSaved: '✅ График сохранён.', customEmpty: 'Сначала впишите график, который хотите сохранить.',
+      presets: 'Быстрые графики'
+    },
+    count: {
+      word: '📄 Поделиться в Word', reset: '♻️ Сбросить подсчёт', resetTitle: 'Сбросить подсчёт за сегодня?',
+      resetMsg: 'Все учтённые сегодня позиции вернутся к нулю. Это действие необратимо.',
+      resetOk: 'Да, сбросить', resetDone: '✅ Подсчёт сброшен.', wordFailed: 'Не удалось подготовить документ Word.'
+    },
+    tasks: {
+      kinds: { daily: 'Задача на день', special: 'Особая задача', routine: 'Текущее обслуживание' },
+      kind: 'Тип задачи', fromGoverness: 'Назначено старшей горничной', own: 'Добавлено вами'
+    },
+    equipierTasks: {
+      title: '📋 Задачи на день',
+      sub: 'Добавляйте задачи, которые выполните сегодня. Старшая горничная также может назначать вам особые задачи или текущее обслуживание.',
+      newTitle: 'Новая задача на день', add: 'Добавить задачу', placeholder: 'Напр.: Пополнить полотенца на 2 этаже',
+      empty: 'На сегодня задач нет.', added: '✅ Задача добавлена.', textEmpty: 'Напишите задачу.'
+    },
+    assign: { multiHint: 'Перед сохранением можно выбрать номера для нескольких сотрудников: у каждого свой цвет и символ.' }
+  },
+  uk: {
+    activity: { absence: 'Відсутність через хворобу: {detail} ({by})' },
+    planningEdit: {
+      sick: 'Відсутність · Хвороба', sickBtn: '🤒 Позначити відсутність / хворобу',
+      customize: '⭐ Зберегти як власний графік', customs: 'Мої графіки',
+      customSaved: '✅ Графік збережено.', customEmpty: 'Спочатку впишіть графік, який хочете зберегти.',
+      presets: 'Швидкі графіки'
+    },
+    count: {
+      word: '📄 Поділитися у Word', reset: '♻️ Скинути підрахунок', resetTitle: 'Скинути підрахунок за сьогодні?',
+      resetMsg: 'Усі враховані сьогодні позиції повернуться до нуля. Цю дію неможливо скасувати.',
+      resetOk: 'Так, скинути', resetDone: '✅ Підрахунок скинуто.', wordFailed: 'Не вдалося підготувати документ Word.'
+    },
+    tasks: {
+      kinds: { daily: 'Завдання на день', special: 'Особливе завдання', routine: 'Поточне обслуговування' },
+      kind: 'Тип завдання', fromGoverness: 'Призначено старшою покоївкою', own: 'Додано вами'
+    },
+    equipierTasks: {
+      title: '📋 Завдання на день',
+      sub: 'Додавайте завдання, які виконаєте сьогодні. Старша покоївка також може призначати вам особливі завдання або поточне обслуговування.',
+      newTitle: 'Нове завдання на день', add: 'Додати завдання', placeholder: 'Напр.: Поповнити рушники на 2 поверсі',
+      empty: 'На сьогодні завдань немає.', added: '✅ Завдання додано.', textEmpty: 'Напишіть завдання.'
+    },
+    assign: { multiHint: 'Перед збереженням можна вибрати номери для кількох працівників: у кожного свій колір і символ.' }
+  }
+};
+
 const escHtml = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const PRINT_CSS = `<style>
   body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 28px; color: #0F172A; }
@@ -2391,7 +2601,7 @@ export default function HomeScreen() {
   const scheduleCol = useFirestoreCollection<ScheduleEntry>('schedule');
   const assignmentsCol = useFirestoreCollection<Assignment>('assignments');
   const roomStatesCol = useFirestoreCollection<RoomState>('roomStates');
-  const requestsCol = useFirestoreCollection<SupplyRequest>('supplyRequests');
+  const presetsDoc = useFirestoreDoc<{ items: string[] }>('config', 'schedulePresets');
   const countsCol = useFirestoreCollection<DailyCount>('dailyCounts');
   const activityCol = useFirestoreCollection<ActivityEvent>('activity');
   const catalogDoc = useFirestoreDoc<{ items: any[] }>('config', 'catalog');
@@ -2410,13 +2620,15 @@ export default function HomeScreen() {
     () => [...reportsCol.items].sort((a, b) => (b.date || '').localeCompare(a.date || '')),
     [reportsCol.items]
   );
-  const supplyRequests = useMemo(
-    () => [...requestsCol.items].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-    [requestsCol.items]
-  );
   const schedule = useMemo(() => {
     const m: Record<string, string> = {};
     scheduleCol.items.forEach(e => { if (e.text) m[`${e.staffId}|${e.date}`] = e.text; });
+    return m;
+  }, [scheduleCol.items]);
+  // Días marcados como falta por enfermedad
+  const scheduleAbs = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    scheduleCol.items.forEach(e => { if (e.absence) m[`${e.staffId}|${e.date}`] = true; });
     return m;
   }, [scheduleCol.items]);
   const assignments = useMemo(
@@ -2448,7 +2660,7 @@ export default function HomeScreen() {
   }, [roomStatesCol.items]);
 
   // Estado de red: caché sin servidor o error de lectura
-  const cols = [staffCol, tasksCol, reportsCol, scheduleCol, assignmentsCol, roomStatesCol, requestsCol, countsCol, activityCol];
+  const cols = [staffCol, tasksCol, reportsCol, scheduleCol, assignmentsCol, roomStatesCol, countsCol, activityCol];
   const loadError = cols.find(c => c.error)?.error || null;
   const offlineRaw = !!loadError || (staffCol.ready && cols.some(c => c.fromCache));
   const [showOffline, setShowOffline] = useState(false);
@@ -2493,7 +2705,7 @@ export default function HomeScreen() {
   const [selectedTargetRole, setSelectedTargetRole] = useState('cleaning');
   const [selectedTargetStaff, setSelectedTargetStaff] = useState<string | null>(null);
   const [newTaskText, setNewTaskText] = useState('');
-  const [newTaskRequestId, setNewTaskRequestId] = useState<string | null>(null);
+  const [newTaskKind, setNewTaskKind] = useState<'special' | 'routine' | 'daily'>('special');
 
   // Lencería (toallas / sábanas) y ficha de habitación (limpieza)
   const [linenModal, setLinenModal] = useState<{ item: Assignment; category: string } | null>(null);
@@ -2501,10 +2713,9 @@ export default function HomeScreen() {
   const [infoAssignmentId, setInfoAssignmentId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
 
-  // Faltantes por planta (equipier → gobernante)
-  const [supplyModalVisible, setSupplyModalVisible] = useState(false);
-  const [supplyFloor, setSupplyFloor] = useState('1');
-  const [supplyText, setSupplyText] = useState('');
+  // Tareas del día (equipier)
+  const [equipTaskModal, setEquipTaskModal] = useState(false);
+  const [equipTaskText, setEquipTaskText] = useState('');
 
   // Mantenimiento
   const [showRoomPicker, setShowRoomPicker] = useState(false);
@@ -2521,10 +2732,10 @@ export default function HomeScreen() {
   const [newStaffPin, setNewStaffPin] = useState('');
   const [newStaffContact, setNewStaffContact] = useState('');
 
-  // Asignación de habitaciones (gobernante / recepción / dirección)
+  // Asignación de habitaciones (gobernante / recepción): selección por trabajador { idTrabajador: [habitaciones] }
   const [assignWorkerId, setAssignWorkerId] = useState<string | null>(null);
-  const [assignCategory, setAssignCategory] = useState<'daily' | 'out' | 'inOut'>('out');
-  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
+  const [assignCategory, setAssignCategory] = useState<'daily' | 'out' | 'inOut'>('inOut');
+  const [selection, setSelection] = useState<Record<string, string[]>>({});
   const [assignSaving, setAssignSaving] = useState(false);
 
   // Utensilios
@@ -2536,7 +2747,7 @@ export default function HomeScreen() {
   const [planYear, setPlanYear] = useState(today.getFullYear());
   const [planMonth, setPlanMonth] = useState(today.getMonth());
   const [planWeek, setPlanWeek] = useState(() => findWeekIndex(today));
-  const [shiftEdit, setShiftEdit] = useState<{ staffId: string; name: string; key: string; text: string } | null>(null);
+  const [shiftEdit, setShiftEdit] = useState<{ staffId: string; name: string; key: string; text: string; absence?: boolean } | null>(null);
 
   const getRole = () => session?.role || '';
   const isRoomBlocked = (roomNumber: string) => rooms.find(r => r.id === roomNumber)?.status === 'blocked';
@@ -2685,6 +2896,7 @@ export default function HomeScreen() {
       }
       await deleteDoc(doc(db, 'config', 'access'));
       await deleteDoc(doc(db, 'config', 'catalog'));
+      await deleteDoc(doc(db, 'config', 'schedulePresets'));
 
       // Si la app usa Firebase Auth, también se elimina el usuario autenticado
       try {
@@ -2786,56 +2998,87 @@ export default function HomeScreen() {
     out: unassignedRooms.filter(r => r.status === 'checkout'),
     inOut: unassignedRooms.filter(r => r.status === 'checkoutIn'),
   };
-  const validSelectedCount = selectedRooms.filter(id => unassignedRooms.some(r => r.id === id)).length;
+  // Cada trabajador tiene su color y símbolo; la selección es por trabajador (selection[idTrabajador] = habitaciones)
+  const cleanersList = staff.filter(s => s.role === 'cleaning');
+  const workerStyle = (id: string) => WORKER_STYLES[Math.max(0, cleanersList.findIndex(c => c.id === id)) % WORKER_STYLES.length];
+  const roomOwner: Record<string, string> = {};
+  Object.keys(selection).forEach(wid => selection[wid].forEach(r => { roomOwner[r] = wid; }));
+  const validSelectedCount = Object.keys(selection).reduce(
+    (n, wid) => n + (cleanersList.some(c => c.id === wid) ? selection[wid].filter(id => unassignedRooms.some(r => r.id === id)).length : 0),
+    0
+  );
 
+  // Tocar una habitación la asigna al trabajador activo; si ya era de otro, pasa al activo; si ya era suya, se quita
   const toggleSelectRoom = (id: string) => {
-    setSelectedRooms(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+    if (!assignWorkerId) { notify(t.assign.pickWorker); return; }
+    setSelection(prev => {
+      const next: Record<string, string[]> = {};
+      Object.keys(prev).forEach(wid => { next[wid] = prev[wid].filter(x => x !== id); });
+      const alreadyMine = (prev[assignWorkerId] || []).includes(id);
+      if (!alreadyMine) next[assignWorkerId] = [...(next[assignWorkerId] || []), id];
+      return next;
+    });
   };
 
   const toggleSelectAll = (cat: 'daily' | 'out' | 'inOut') => {
+    if (!assignWorkerId) { notify(t.assign.pickWorker); return; }
     const ids = assignableRooms[cat].map(r => r.id);
-    const allSelected = ids.length > 0 && ids.every(id => selectedRooms.includes(id));
-    setSelectedRooms(prev => (allSelected ? prev.filter(id => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
+    setSelection(prev => {
+      const allMine = ids.length > 0 && ids.every(id => (prev[assignWorkerId] || []).includes(id));
+      const next: Record<string, string[]> = {};
+      Object.keys(prev).forEach(wid => { next[wid] = prev[wid].filter(x => !ids.includes(x)); });
+      next[assignWorkerId] = allMine
+        ? (next[assignWorkerId] || [])
+        : [...(next[assignWorkerId] || []), ...ids];
+      return next;
+    });
   };
 
   const submitAssignments = async () => {
     const role = getRole();
-    if (role !== 'governess' && role !== 'reception' && role !== 'direction') { notify(t.alerts.noPermission); return; }
-    const worker = staff.find(s => s.id === assignWorkerId && s.role === 'cleaning');
-    if (!worker) { notify(t.assign.pickWorker); return; }
-    const targets = selectedRooms
-      .map(id => unassignedRooms.find(r => r.id === id))
-      .filter((r): r is (typeof rooms)[number] => !!r && !!STATUS_TO_TASKTYPE[r.status]);
-    if (!targets.length) { notify(t.assign.nothingSelected); return; }
+    if (role !== 'governess' && role !== 'reception') { notify(t.alerts.noPermission); return; }
+    // Cada grupo conserva SU trabajador: así las habitaciones no acaban todas en la última persona elegida
+    const groups = Object.keys(selection)
+      .map(wid => ({
+        worker: cleanersList.find(c => c.id === wid),
+        rooms: selection[wid]
+          .map(id => unassignedRooms.find(r => r.id === id))
+          .filter((r): r is (typeof rooms)[number] => !!r && !!STATUS_TO_TASKTYPE[r.status]),
+      }))
+      .filter(g => !!g.worker && g.rooms.length > 0);
+    if (!groups.length) { notify(t.assign.nothingSelected); return; }
 
     setAssignSaving(true);
     try {
-      const batch = writeBatch(db); // una sola escritura atómica para todas las habitaciones
+      const batch = writeBatch(db); // una sola escritura atómica para todos los trabajadores y habitaciones
       const now = Date.now();
-      targets.forEach(r => {
-        const id = `${todayKey}_${r.id}`;
-        batch.set(doc(db, 'assignments', id), {
-          date: todayKey, staffId: worker.id, staffName: worker.name, room: r.id,
-          taskType: STATUS_TO_TASKTYPE[r.status],
-          guestName: assignments.find(a => a.id === id)?.guestName || '',
-          workStatus: 'not_started', // por defecto: aún no hecho
-          inspected: false, linen: null, notes: [],
-        });
-        batch.set(doc(db, 'roomStates', r.id), {
-          status: r.status, prevStatus: r.prevStatus ?? null,
-          assignedTo: worker.id, assignedByName: worker.name, assignmentStatus: 'pending', assignedDate: todayKey,
-        }, { merge: true });
-        batch.set(doc(collection(db, 'activity')), {
-          date: todayKey, ts: now, by: session?.username || '', role, type: 'assigned', room: r.id, detail: worker.name,
+      groups.forEach(({ worker, rooms: list }) => {
+        list.forEach(r => {
+          const id = `${todayKey}_${r.id}`;
+          batch.set(doc(db, 'assignments', id), {
+            date: todayKey, staffId: worker!.id, staffName: worker!.name, room: r.id,
+            taskType: STATUS_TO_TASKTYPE[r.status],
+            guestName: assignments.find(a => a.id === id)?.guestName || '',
+            workStatus: 'not_started', // por defecto: aún no hecho
+            inspected: false, linen: null, notes: [],
+          });
+          batch.set(doc(db, 'roomStates', r.id), {
+            status: r.status, prevStatus: r.prevStatus ?? null,
+            assignedTo: worker!.id, assignedByName: worker!.name, assignmentStatus: 'pending', assignedDate: todayKey,
+          }, { merge: true });
+          batch.set(doc(collection(db, 'activity')), {
+            date: todayKey, ts: now, by: session?.username || '', role, type: 'assigned', room: r.id, detail: worker!.name,
+          });
         });
       });
       const commit = batch.commit();
       commit.catch(e => console.error('Error al guardar la asignación:', e));
       // Sin red el commit queda en cola: no bloqueamos la pantalla más de 6 s
       await Promise.race([commit, new Promise<void>(resolve => setTimeout(resolve, 6000))]);
-      setSelectedRooms([]);
-      setAssignWorkerId(null); // listo para el siguiente empleado
-      notify(t.assign.success.replace('{name}', worker.name));
+      const names = groups.map(g => g.worker!.name).join(', ');
+      setSelection({});
+      setAssignWorkerId(null);
+      notify(t.assign.success.replace('{name}', names));
     } catch (error) {
       writeFailed(error);
     } finally {
@@ -2857,12 +3100,12 @@ export default function HomeScreen() {
   };
 
   /* ---------- Tareas (Firestore) ---------- */
-  const openTaskModal = (prefill?: { role: string; text: string; requestId?: string }) => {
+  const openTaskModal = (prefill?: { role: string; text: string }) => {
     const role = prefill?.role || 'cleaning';
     setSelectedTargetRole(role);
     setSelectedTargetStaff(staff.find(s => s.role === role)?.id || null);
     setNewTaskText(prefill?.text || '');
-    setNewTaskRequestId(prefill?.requestId || null);
+    setNewTaskKind('special');
     setNewTaskModalVisible(true);
   };
 
@@ -2871,51 +3114,52 @@ export default function HomeScreen() {
     setSelectedTargetStaff(staff.find(s => s.role === role)?.id || null);
   };
 
+  // La gobernante crea tareas (para el equipier pueden ser «especiales» o de «mantenimiento cotidiano»)
   const handleGovernessTask = () => {
     if (!newTaskText.trim()) { notify(t.alerts.taskEmpty); return; }
     const person = staff.find(s => s.id === selectedTargetStaff);
-    const ref = doc(collection(db, 'tasks'));
-    setDoc(ref, {
+    setDoc(doc(collection(db, 'tasks')), {
       targetRole: selectedTargetRole,
       targetName: person ? person.name : '',
       targetStaffId: person ? person.id : '',
       taskText: newTaskText.trim(),
       status: 'pending',
-      requestId: newTaskRequestId || '',
+      kind: selectedTargetRole === 'equipier' ? newTaskKind : 'daily',
+      createdBy: 'governess',
       createdAt: Date.now(),
     }).catch(writeFailed);
-    if (newTaskRequestId) {
-      updateDoc(doc(db, 'supplyRequests', newTaskRequestId), { status: 'assigned', taskId: ref.id }).catch(writeFailed);
-    }
     logEvent('task', '', person ? person.name : (t.roles[selectedTargetRole]?.title || ''));
     setNewTaskText('');
-    setNewTaskRequestId(null);
     setNewTaskModalVisible(false);
     notify(t.alerts.taskSent);
+  };
+
+  // El equipier añade sus propias tareas del día
+  const submitOwnTask = () => {
+    if (!equipTaskText.trim()) { notify(t.equipierTasks.textEmpty); return; }
+    setDoc(doc(collection(db, 'tasks')), {
+      targetRole: 'equipier',
+      targetName: session?.username || '',
+      targetStaffId: session?.staffId || '',
+      taskText: equipTaskText.trim(),
+      status: 'pending',
+      kind: 'daily',
+      createdBy: 'self',
+      createdAt: Date.now(),
+    }).catch(writeFailed);
+    logEvent('task', '', session?.username || '');
+    setEquipTaskText('');
+    setEquipTaskModal(false);
+    notify(t.equipierTasks.added);
   };
 
   const toggleTaskStatus = (task: TaskItem) => {
     const next = task.status === 'pending' ? 'done' : 'pending';
     updateDoc(doc(db, 'tasks', task.id), { status: next }).catch(writeFailed);
     if (next === 'done') logEvent('taskDone', '', task.taskText.slice(0, 80));
-    if (task.requestId) {
-      updateDoc(doc(db, 'supplyRequests', task.requestId), { status: next === 'done' ? 'done' : 'assigned' }).catch(writeFailed);
-    }
   };
 
-  /* ---------- Faltantes por planta (equipier → gobernante) ---------- */
-  const submitSupplyRequest = () => {
-    if (!supplyText.trim()) { notify(t.supply.textEmpty); return; }
-    setDoc(doc(collection(db, 'supplyRequests')), {
-      floor: supplyFloor, text: supplyText.trim(),
-      author: session?.username || '', authorId: session?.staffId || '',
-      status: 'open', createdAt: Date.now(),
-    }).catch(writeFailed);
-    logEvent('supply', supplyFloor, supplyText.trim().slice(0, 80));
-    setSupplyText('');
-    setSupplyModalVisible(false);
-    notify(t.supply.sent);
-  };
+  const removeTask = (task: TaskItem) => { deleteDoc(doc(db, 'tasks', task.id)).catch(writeFailed); };
 
   /* ---------- Lencería y notas por habitación ---------- */
   const openLinen = (item: Assignment, category: string) => {
@@ -3078,7 +3322,8 @@ export default function HomeScreen() {
     }
   };
 
-  const printDailyCount = async () => {
+  // Hoja del día (conteo): HTML para imprimir / Word y texto plano de reserva
+  const buildCountDoc = () => {
     let grandTotal = 0;
     const sections = CATALOG_CATEGORIES.map(cat => {
       const rows = catalog.filter(c => c.category === cat && (todayCounts[c.id] || 0) > 0);
@@ -3111,7 +3356,53 @@ export default function HomeScreen() {
       grandTotal ? `${t.count.total}: ${grandTotal}` : t.count.none,
     ].join('\n');
 
+    return { html, plain };
+  };
+
+  const printDailyCount = async () => {
+    const { html, plain } = buildCountDoc();
     await openPrint(html, plain);
+  };
+
+  // Compartir la hoja en formato Word (.doc con contenido HTML, que Word abre directamente)
+  const shareCountWord = async () => {
+    const { html, plain } = buildCountDoc();
+    const wordHtml = html.replace(
+      '<html>',
+      '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    );
+    try {
+      if (FileModule?.File && FileModule?.Paths && SharingModule?.shareAsync) {
+        const file = new FileModule.File(FileModule.Paths.cache, `conteo-${todayKey}.doc`);
+        if (file.exists) file.delete();
+        file.create();
+        file.write('\uFEFF' + wordHtml);
+        if (await SharingModule.isAvailableAsync()) {
+          await SharingModule.shareAsync(file.uri, {
+            mimeType: 'application/msword', UTI: 'com.microsoft.word.doc', dialogTitle: t.count.word,
+          });
+          return;
+        }
+      }
+      await Share.share({ message: plain }); // alternativa si faltan expo-file-system / expo-sharing
+    } catch (error: any) {
+      const msg = String(error?.message || error);
+      if (!/did not complete|cancel|dismiss/i.test(msg)) {
+        console.error('Error al compartir en Word:', error);
+        notify(t.count.wordFailed);
+      }
+    }
+  };
+
+  const askResetCount = () => {
+    setConfirm({
+      title: t.count.resetTitle, message: t.count.resetMsg, okLabel: t.count.resetOk, destructive: true,
+      onOk: () => {
+        setConfirm(null);
+        setDoc(doc(db, 'dailyCounts', todayKey), { counts: {}, updatedBy: session?.username || '' }).catch(writeFailed);
+        notify(t.count.resetDone);
+      },
+    });
   };
 
   /* ---------- Resumen total del día (Gobernante / Dirección): todo lo ocurrido en todas las categorías ---------- */
@@ -3147,13 +3438,9 @@ export default function HomeScreen() {
         `${k.targetName ? k.targetName + ' · ' : ''}${t.roles[k.targetRole]?.title || ''}`, k.taskText,
         k.status === 'done' ? t.dashboard.completed : t.dashboard.pending,
       ]);
-    const supplyStatus = (s: string) => (s === 'done' ? t.supply.done : s === 'assigned' ? t.supply.assigned : t.supply.open);
-    const supplyRows = supplyRequests
-      .filter(r => r.status !== 'done' || dateKey(new Date(r.createdAt)) === todayKey)
-      .map(r => [r.floor, r.text, r.author, supplyStatus(r.status)]);
     const reportRows = reports.filter(r => sameDay(r.date)).map(r => [r.room, r.text, r.author, new Date(r.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })]);
     const countRows = catalog.filter(c => (todayCounts[c.id] || 0) > 0).map(c => [itemName(c), String(todayCounts[c.id])]);
-    const scheduleRows = staff.filter(s => schedule[`${s.id}|${todayKey}`]).map(s => [s.name, s.position || t.roles[s.role]?.title || '', schedule[`${s.id}|${todayKey}`]]);
+    const scheduleRows = staff.filter(s => schedule[`${s.id}|${todayKey}`]).map(s => [s.name, s.position || t.roles[s.role]?.title || '', scheduleAbs[`${s.id}|${todayKey}`] ? t.planningEdit.sick : schedule[`${s.id}|${todayKey}`]]);
 
     const html = `<html><head><meta charset="utf-8"/>${PRINT_CSS}</head><body>
       <h1>${escHtml(t.appTitle)} — ${escHtml(t.summary.title)}</h1>
@@ -3163,7 +3450,6 @@ export default function HomeScreen() {
       ${section(t.summary.rooms, table([t.summary.status, '#', t.common.room], roomRows))}
       ${section(t.summary.assignments, table([t.common.room, t.summary.service, t.assign.worker, t.summary.status, t.dashboard.guestLabel.replace(/[:：]\s*$/, ''), t.summary.inspected, t.summary.linen, t.summary.notes], assignmentRows))}
       ${section(t.summary.tasks, table([t.tasks.person, t.summary.task, t.summary.status], taskRows))}
-      ${section(t.summary.supply, table([t.summary.floor, t.summary.text, t.summary.by, t.summary.status], supplyRows))}
       ${section(t.summary.reports, table([t.common.room, t.summary.text, t.summary.by, t.summary.time], reportRows))}
       ${section(t.summary.counts, table([t.count.article, t.count.qty], countRows))}
       ${section(t.summary.schedule, table([t.staff.name, t.summary.role, t.summary.shift], scheduleRows))}
@@ -3198,15 +3484,22 @@ export default function HomeScreen() {
   const openShiftEdit = (s: StaffMember, key: string) => {
     const role = getRole();
     if (role !== 'governess' && role !== 'direction') return;
-    setShiftEdit({ staffId: s.id, name: s.name, key, text: schedule[`${s.id}|${key}`] || '' });
+    const absence = !!scheduleAbs[`${s.id}|${key}`];
+    setShiftEdit({ staffId: s.id, name: s.name, key, text: absence ? '' : (schedule[`${s.id}|${key}`] || ''), absence });
   };
 
   const saveShift = () => {
     if (!shiftEdit) return;
-    const text = shiftEdit.text.trim();
     const ref = doc(db, 'schedule', `${shiftEdit.staffId}_${shiftEdit.key}`);
-    if (!text) deleteDoc(ref).catch(writeFailed);
-    else setDoc(ref, { staffId: shiftEdit.staffId, date: shiftEdit.key, text }).catch(writeFailed);
+    const text = shiftEdit.text.trim();
+    if (shiftEdit.absence) {
+      setDoc(ref, { staffId: shiftEdit.staffId, date: shiftEdit.key, text: t.planningEdit.sick, absence: 'sick' }).catch(writeFailed);
+      logEvent('absence', '', shiftEdit.name);
+    } else if (!text) {
+      deleteDoc(ref).catch(writeFailed);
+    } else {
+      setDoc(ref, { staffId: shiftEdit.staffId, date: shiftEdit.key, text }).catch(writeFailed);
+    }
     setShiftEdit(null);
   };
 
@@ -3214,6 +3507,20 @@ export default function HomeScreen() {
     if (!shiftEdit) return;
     deleteDoc(doc(db, 'schedule', `${shiftEdit.staffId}_${shiftEdit.key}`)).catch(writeFailed);
     setShiftEdit(null);
+  };
+
+  // Horarios personalizados (compartidos en Firestore: config/schedulePresets)
+  const customPresets: string[] = presetsDoc.data?.items || [];
+  const saveCustomPreset = () => {
+    const txt = (shiftEdit?.text || '').trim();
+    if (!txt) { notify(t.planningEdit.customEmpty); return; }
+    if (!customPresets.includes(txt)) {
+      setDoc(doc(db, 'config', 'schedulePresets'), { items: [...customPresets, txt] }).catch(writeFailed);
+    }
+    notify(t.planningEdit.customSaved);
+  };
+  const removeCustomPreset = (txt: string) => {
+    setDoc(doc(db, 'config', 'schedulePresets'), { items: customPresets.filter(x => x !== txt) }).catch(writeFailed);
   };
 
   /* ---------- Piezas nuevas reutilizables ---------- */
@@ -3428,14 +3735,14 @@ export default function HomeScreen() {
     const isGoverness = roleKey === 'governess';
     const isReception = roleKey === 'reception';
     const canEditPlanning = isDirection || isGoverness;
-    const canAssign = isGoverness || isReception || isDirection;
+    const canAssign = isGoverness || isReception;
 
     // Pestañas por perfil (Ajustes en todos)
     const settingsTab = { id: 'settings', label: t.feed.tabSettings };
     const assignTab = { id: 'assign', label: t.feed.tabAssign };
     let tabs: { id: string; label: string }[] = [];
     if (isDirection) tabs = [
-      { id: 'dashboard', label: t.feed.tabDashboard }, assignTab, { id: 'map', label: t.feed.tabMap },
+      { id: 'dashboard', label: t.feed.tabDashboard }, { id: 'map', label: t.feed.tabMap },
       { id: 'planning', label: t.feed.tabPlanning }, { id: 'staff', label: t.feed.tabStaff }, settingsTab,
     ];
     else if (isGoverness) tabs = [
@@ -3455,13 +3762,11 @@ export default function HomeScreen() {
     );
 
     const me = staff.find(s => s.id === session.staffId);
-    const todayShiftText = me ? (schedule[`${me.id}|${todayKey}`] || '—') : '—';
+    const todayShiftText = me ? (scheduleAbs[`${me.id}|${todayKey}`] ? t.planningEdit.sick : (schedule[`${me.id}|${todayKey}`] || '—')) : '—';
     const myAssignments = todayAssignments.filter(a => a.staffId === session.staffId);
     const infoAssignment = assignments.find(a => a.id === infoAssignmentId) || null;
 
     const taskTypeLabel = (type: string) => t.dashboard.taskTypes[type] || type;
-    const requestStatusLabel = (s: string) => (s === 'done' ? t.supply.done : s === 'assigned' ? t.supply.assigned : t.supply.open);
-    const requestStatusColor = (s: string) => (s === 'done' ? '#10B981' : s === 'assigned' ? '#0284C7' : '#F59E0B');
 
     /* ----- Plano del hotel (colores fijos: verde salida · azul libre y limpia · rojo salida/check-in · blanco limpieza diaria · negro bloqueada) ----- */
     const renderMap = () => {
@@ -3604,16 +3909,17 @@ export default function HomeScreen() {
                       {week.map((d, i) => {
                         const key = dateKey(d);
                         const inMonth = d.getMonth() === planMonth;
-                        const text = schedule[`${s.id}|${key}`] || '';
-                        if (text) total += hoursFromText(text);
+                        const abs = !!scheduleAbs[`${s.id}|${key}`];
+                        const text = abs ? t.planningEdit.sick : (schedule[`${s.id}|${key}`] || '');
+                        if (text && !abs) total += hoursFromText(text);
                         return (
                           <TouchableOpacity
                             key={i}
                             disabled={!inMonth || !canEditPlanning}
                             onPress={() => openShiftEdit(s, key)}
-                            style={[styles.planCell, { backgroundColor: text ? '#DBEAFE' : '#F8FAFC' }, !inMonth && { opacity: 0.35 }]}
+                            style={[styles.planCell, { backgroundColor: abs ? '#FEE2E2' : text ? '#DBEAFE' : '#F8FAFC' }, !inMonth && { opacity: 0.35 }]}
                           >
-                            <Text style={styles.planCellText} numberOfLines={3}>{text}</Text>
+                            <Text style={[styles.planCellText, abs && { color: '#B91C1C' }]} numberOfLines={3}>{text}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -3628,20 +3934,23 @@ export default function HomeScreen() {
       );
     };
 
-    /* ----- Asignación de habitaciones: personal → categoría → habitaciones sin asignar ----- */
+    /* ----- Asignación de habitaciones: personal → habitaciones, cada persona con su color y símbolo ----- */
     const renderAssign = () => {
-      const cleaners = staff.filter(s => s.role === 'cleaning');
-      const worker = cleaners.find(c => c.id === assignWorkerId) || null;
+      const worker = cleanersList.find(c => c.id === assignWorkerId) || null;
       const catRooms = assignableRooms[assignCategory];
-      const allSelected = catRooms.length > 0 && catRooms.every(r => selectedRooms.includes(r.id));
+      const allMine = !!assignWorkerId && catRooms.length > 0 && catRooms.every(r => roomOwner[r.id] === assignWorkerId);
       const dayList = assignments.filter(a => a.date === todayKey);
       const byWorker: Record<string, Assignment[]> = {};
-      dayList.forEach(a => { (byWorker[a.staffName || '—'] = byWorker[a.staffName || '—'] || []).push(a); });
-      const categories: { key: 'daily' | 'out' | 'inOut'; label: string; color: string }[] = [
-        { key: 'daily', label: t.assign.daily, color: TASK_TYPE_COLORS.daily },
-        { key: 'out', label: t.assign.out, color: TASK_TYPE_COLORS.out },
+      dayList.forEach(a => { (byWorker[a.staffId] = byWorker[a.staffId] || []).push(a); });
+      // Orden izquierda → derecha: entradas, salidas, limpieza diaria
+      const categories: { key: 'inOut' | 'out' | 'daily'; label: string; color: string }[] = [
         { key: 'inOut', label: t.assign.inOut, color: TASK_TYPE_COLORS.inOut },
+        { key: 'out', label: t.assign.out, color: TASK_TYPE_COLORS.out },
+        { key: 'daily', label: t.assign.daily, color: TASK_TYPE_COLORS.daily },
       ];
+      const pendingGroups = cleanersList
+        .map(c => ({ worker: c, list: (selection[c.id] || []).filter(id => unassignedRooms.some(r => r.id === id)) }))
+        .filter(g => g.list.length > 0);
 
       return (
         <View style={styles.feedCard}>
@@ -3650,37 +3959,52 @@ export default function HomeScreen() {
             <Text style={styles.feedCardSubtitle}>{t.assign.sub}</Text>
           </View>
 
-          <View style={styles.hintBox}><Text style={styles.hintText}>{t.assign.howto}</Text></View>
+          <View style={styles.hintBox}>
+            <Text style={styles.hintText}>{t.assign.howto}</Text>
+            <Text style={[styles.hintText, { marginTop: 6 }]}>{t.assign.multiHint}</Text>
+          </View>
 
-          {/* Paso 1: personal de limpieza */}
+          {/* Paso 1: personal de limpieza (color y símbolo propios + habitaciones ya elegidas) */}
           <View style={styles.sectionBox}>
             <Text style={styles.sectionTitle}>{t.assign.step1}</Text>
-            {cleaners.length === 0 ? (
+            {cleanersList.length === 0 ? (
               <Text style={styles.emptyText}>{t.assign.noWorkers}</Text>
             ) : (
               <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
-                {cleaners.map(c => (
-                  <TouchableOpacity key={c.id} style={[styles.personChip, worker?.id === c.id && styles.personChipActive]} onPress={() => setAssignWorkerId(c.id)}>
-                    <Text style={[styles.deptPillText, worker?.id === c.id && styles.deptPillTextActive]}>👤 {c.name}</Text>
-                  </TouchableOpacity>
-                ))}
+                {cleanersList.map(c => {
+                  const ws = workerStyle(c.id);
+                  const active = assignWorkerId === c.id;
+                  const count = (selection[c.id] || []).filter(id => unassignedRooms.some(r => r.id === id)).length;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[styles.workerChip, { borderColor: ws.color }, active && { backgroundColor: ws.color }]}
+                      onPress={() => setAssignWorkerId(c.id)}
+                    >
+                      <Text style={[styles.workerChipText, { color: active ? '#FFFFFF' : ws.color }]}>
+                        {ws.symbol} {c.name}{count > 0 ? ` · ${count}` : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
 
-          {/* Paso 2: solo habitaciones aún sin asignar hoy, por categoría */}
+          {/* Paso 2: entradas · salidas · limpieza diaria (solo habitaciones aún sin asignar hoy) */}
           <View style={styles.sectionBox}>
             <Text style={styles.sectionTitle}>{t.assign.step2}</Text>
-            <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
+            <View style={[styles.pillRow, { flexWrap: 'nowrap' }]}>
               {categories.map(c => (
                 <TouchableOpacity
                   key={c.key}
-                  style={[styles.deptPill, { minWidth: 100 }, assignCategory === c.key && { backgroundColor: c.color, borderColor: c.color }]}
+                  style={[styles.deptPill, { paddingVertical: 10 }, assignCategory === c.key && { backgroundColor: c.color, borderColor: c.color }]}
                   onPress={() => setAssignCategory(c.key)}
                 >
-                  <Text style={[styles.deptPillText, assignCategory === c.key && styles.deptPillTextActive]} numberOfLines={2}>
-                    {c.label} ({assignableRooms[c.key].length})
+                  <Text style={[styles.deptPillText, { textAlign: 'center' }, assignCategory === c.key && styles.deptPillTextActive]} numberOfLines={3}>
+                    {c.label}
                   </Text>
+                  <Text style={[styles.catCount, assignCategory === c.key && { color: '#FFFFFF' }]}>({assignableRooms[c.key].length})</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -3690,14 +4014,19 @@ export default function HomeScreen() {
             ) : (
               <>
                 <TouchableOpacity style={[styles.presetChip, { alignSelf: 'flex-start', marginBottom: 10 }]} onPress={() => toggleSelectAll(assignCategory)}>
-                  <Text style={styles.presetChipText}>{allSelected ? t.assign.deselectAll : t.assign.selectAll}</Text>
+                  <Text style={styles.presetChipText}>{allMine ? t.assign.deselectAll : t.assign.selectAll}</Text>
                 </TouchableOpacity>
                 <View style={styles.circleGrid}>
                   {catRooms.map(r => {
-                    const sel = selectedRooms.includes(r.id);
+                    const owner = roomOwner[r.id];
+                    const ws = owner ? workerStyle(owner) : null;
                     return (
-                      <TouchableOpacity key={r.id} style={[styles.roomPick, sel && styles.roomPickSel]} onPress={() => toggleSelectRoom(r.id)}>
-                        <Text style={[styles.roomPickText, sel && { color: '#FFFFFF' }]}>{sel ? '✓ ' : ''}{r.id}</Text>
+                      <TouchableOpacity
+                        key={r.id}
+                        style={[styles.roomPick, ws && { backgroundColor: ws.color, borderColor: ws.color }]}
+                        onPress={() => toggleSelectRoom(r.id)}
+                      >
+                        <Text style={[styles.roomPickText, ws && { color: '#FFFFFF' }]}>{ws ? `${ws.symbol} ` : ''}{r.id}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -3705,38 +4034,57 @@ export default function HomeScreen() {
               </>
             )}
 
-            <Text style={styles.assignCounter}>
-              {t.assign.selected.replace('{n}', String(validSelectedCount)).replace('{name}', worker?.name || '—')}
-            </Text>
+            {/* Quién tiene qué antes de guardar */}
+            {pendingGroups.length === 0 ? (
+              <Text style={styles.assignCounter}>
+                {t.assign.selected.replace('{n}', '0').replace('{name}', worker?.name || '—')}
+              </Text>
+            ) : (
+              pendingGroups.map(g => {
+                const ws = workerStyle(g.worker.id);
+                return (
+                  <View key={g.worker.id} style={[styles.pendingRow, { borderLeftColor: ws.color }]}>
+                    <Text style={[styles.assignCounter, { marginTop: 0, color: ws.color }]}>
+                      {ws.symbol} {t.assign.selected.replace('{n}', String(g.list.length)).replace('{name}', g.worker.name)}
+                    </Text>
+                    <Text style={styles.bedHistoryNormal}>{g.list.join(' · ')}</Text>
+                  </View>
+                );
+              })
+            )}
           </View>
 
-          {/* Asignaciones de hoy (compartidas en tiempo real con recepción y gobernante) */}
+          {/* Asignaciones de hoy: cada bloque con el color y símbolo de su trabajador */}
           <View style={styles.sectionBox}>
             <Text style={styles.sectionTitle}>{t.assign.listTitle} ({dayList.length})</Text>
             {dayList.length === 0 && <Text style={styles.emptyText}>{t.assign.empty}</Text>}
-            {Object.keys(byWorker).map(name => (
-              <View key={name} style={{ marginBottom: 10 }}>
-                <Text style={styles.floorTitle}>👤 {name} ({byWorker[name].length})</Text>
-                <View style={styles.roomsNotesList}>
-                  {byWorker[name].map(a => (
-                    <View key={a.id} style={[styles.roomNoteRow, { borderLeftColor: TASK_TYPE_COLORS[a.taskType] }]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.noteRoomNum}>{t.common.room} {a.room} · {taskTypeLabel(a.taskType)}</Text>
-                        <Text style={styles.bedHistoryNormal}>{t.dashboard.cleaningLabel}{workLabel(a.workStatus)}</Text>
-                        <TextInput
-                          key={`${a.id}-${a.guestName || ''}`}
-                          style={styles.guestInput} placeholder={t.assign.guestPH} placeholderTextColor="#94A3B8"
-                          defaultValue={a.guestName || ''} onEndEditing={e => updateGuestName(a, e.nativeEvent.text)}
-                        />
+            {Object.keys(byWorker).map(wid => {
+              const ws = workerStyle(wid);
+              const name = byWorker[wid][0]?.staffName || '—';
+              return (
+                <View key={wid} style={{ marginBottom: 10 }}>
+                  <Text style={[styles.floorTitle, { color: ws.color }]}>{ws.symbol} {name} ({byWorker[wid].length})</Text>
+                  <View style={styles.roomsNotesList}>
+                    {byWorker[wid].map(a => (
+                      <View key={a.id} style={[styles.roomNoteRow, { borderLeftColor: ws.color }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.noteRoomNum}>{ws.symbol} {t.common.room} {a.room} · {taskTypeLabel(a.taskType)}</Text>
+                          <Text style={styles.bedHistoryNormal}>{t.dashboard.cleaningLabel}{workLabel(a.workStatus)}</Text>
+                          <TextInput
+                            key={`${a.id}-${a.guestName || ''}`}
+                            style={styles.guestInput} placeholder={t.assign.guestPH} placeholderTextColor="#94A3B8"
+                            defaultValue={a.guestName || ''} onEndEditing={e => updateGuestName(a, e.nativeEvent.text)}
+                          />
+                        </View>
+                        <TouchableOpacity style={styles.deleteBtn} onPress={() => removeAssignment(a)}>
+                          <Text style={styles.deleteBtnText}>✕</Text>
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity style={styles.deleteBtn} onPress={() => removeAssignment(a)}>
-                        <Text style={styles.deleteBtnText}>✕</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
       );
@@ -3929,6 +4277,12 @@ export default function HomeScreen() {
         <TouchableOpacity style={[styles.actionFeedButton, { backgroundColor: '#0F172A', marginTop: 8 }]} onPress={printDailyCount}>
           <Text style={styles.actionFeedButtonText}>{t.count.print}</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionFeedButton, { backgroundColor: '#2B579A', marginTop: 8 }]} onPress={shareCountWord}>
+          <Text style={styles.actionFeedButtonText}>{t.count.word}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionFeedButton, { backgroundColor: '#B45309', marginTop: 8 }]} onPress={askResetCount}>
+          <Text style={styles.actionFeedButtonText}>{t.count.reset}</Text>
+        </TouchableOpacity>
       </View>
     );
 
@@ -3986,7 +4340,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {renderDailyCount(false)}
+        {renderDailyCount(true)}
       </View>
     );
 
@@ -4012,67 +4366,46 @@ export default function HomeScreen() {
       </View>
     ) : null;
 
-    /* ----- Equipier: avisos de faltantes por planta (símbolo +) ----- */
-    const renderEquipierRequests = () => {
-      const mine = supplyRequests.filter(r => r.authorId === session.staffId);
+    /* ----- Equipier: solo el cuadro de tareas del día (las suyas + las que añade la gobernante) ----- */
+    const renderEquipierTasks = () => {
+      const list = myDelegatedTasks.filter(task =>
+        task.status === 'pending' || (!!task.createdAt && dateKey(new Date(task.createdAt)) === todayKey)
+      );
       return (
         <View style={styles.sectionBox}>
           <View style={styles.titleWithPlus}>
-            <Text style={[styles.sectionTitle, { flex: 1, marginBottom: 0 }]}>{t.supply.title}</Text>
-            <PlusButton onPress={() => { setSupplyText(''); setSupplyModalVisible(true); }} />
+            <Text style={[styles.sectionTitle, { flex: 1, marginBottom: 0 }]}>{t.equipierTasks.title}</Text>
+            <PlusButton onPress={() => { setEquipTaskText(''); setEquipTaskModal(true); }} />
           </View>
-          <Text style={[styles.directionSubText, { marginTop: 6 }]}>{t.supply.sub}</Text>
-          <Text style={styles.sectionTitle}>{t.supply.mine}</Text>
-          {mine.length === 0 && <Text style={styles.emptyText}>{t.supply.empty}</Text>}
+          <Text style={[styles.directionSubText, { marginTop: 6 }]}>{t.equipierTasks.sub}</Text>
+
+          {list.length === 0 && <Text style={styles.emptyText}>{t.equipierTasks.empty}</Text>}
           <View style={styles.tasksList}>
-            {mine.slice(0, 10).map(r => (
-              <View key={r.id} style={[styles.taskRow, r.status === 'done' && styles.taskRowDone]}>
+            {list.map(task => (
+              <View key={task.id} style={[styles.taskRow, task.status === 'done' && styles.taskRowDone]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.taskTargetBadge}>{t.supply.floor} {r.floor}</Text>
-                  <Text style={styles.taskText}>{r.text}</Text>
+                  <Text style={styles.taskTargetBadge}>
+                    {t.tasks.kinds[task.kind || 'daily']} · {task.createdBy === 'self' ? t.tasks.own : t.tasks.fromGoverness}
+                  </Text>
+                  <Text style={[styles.taskText, task.status === 'done' && styles.taskTextDone]}>{task.taskText}</Text>
                 </View>
-                <View style={[styles.taskStatusBtn, { backgroundColor: requestStatusColor(r.status) }]}>
-                  <Text style={styles.taskStatusText}>{requestStatusLabel(r.status)}</Text>
-                </View>
+                <TouchableOpacity
+                  style={[styles.taskStatusBtn, task.status === 'done' ? { backgroundColor: '#10B981' } : { backgroundColor: '#0284C7' }]}
+                  onPress={() => toggleTaskStatus(task)}
+                >
+                  <Text style={styles.taskStatusText}>{task.status === 'done' ? t.dashboard.completed : t.dashboard.pending}</Text>
+                </TouchableOpacity>
+                {task.createdBy === 'self' && (
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => removeTask(task)}>
+                    <Text style={styles.deleteBtnText}>✕</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
           </View>
         </View>
       );
     };
-
-    /* ----- Gobernante: faltantes avisados → crear tarea para el equipier ----- */
-    const renderGovernessRequests = () => (
-      <View style={{ marginTop: 18 }}>
-        <Text style={styles.sectionTitle}>{t.supply.requestsTitle}</Text>
-        {supplyRequests.length === 0 ? (
-          <Text style={styles.emptyText}>{t.supply.empty}</Text>
-        ) : (
-          <View style={styles.tasksList}>
-            {supplyRequests.slice(0, 15).map(r => (
-              <View key={r.id} style={[styles.taskRow, r.status === 'done' && styles.taskRowDone]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.taskTargetBadge}>{t.supply.floor} {r.floor} · {t.maintenance.from} {r.author}</Text>
-                  <Text style={styles.taskText}>{r.text}</Text>
-                </View>
-                {r.status === 'open' ? (
-                  <TouchableOpacity
-                    style={[styles.taskStatusBtn, { backgroundColor: '#5b21b6' }]}
-                    onPress={() => openTaskModal({ role: 'equipier', text: `${t.supply.taskPrefix} ${r.floor}: ${r.text}`, requestId: r.id })}
-                  >
-                    <Text style={styles.taskStatusText}>{t.supply.createTask}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={[styles.taskStatusBtn, { backgroundColor: requestStatusColor(r.status) }]}>
-                    <Text style={styles.taskStatusText}>{requestStatusLabel(r.status)}</Text>
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-    );
 
     /* ----- Gobernante: inspección y bloqueo, basada en el planning del día ----- */
     const renderInspection = () => (
@@ -4299,6 +4632,7 @@ export default function HomeScreen() {
                         <View style={{ flex: 1 }}>
                           <Text style={styles.taskTargetBadge}>
                             {t.common.for}: {task.targetName ? `${task.targetName} · ` : ''}{t.roles[task.targetRole]?.title}
+                            {task.targetRole === 'equipier' && task.kind ? ` · ${t.tasks.kinds[task.kind]}` : ''}
                           </Text>
                           <Text style={[styles.taskText, task.status === 'done' && styles.taskTextDone]}>{task.taskText}</Text>
                         </View>
@@ -4311,8 +4645,6 @@ export default function HomeScreen() {
                       </View>
                     ))}
                   </View>
-
-                  {renderGovernessRequests()}
 
                   <Text style={[styles.sectionTitle, { marginTop: 18 }]}>{t.maintenance.reportsTitle}</Text>
                   {reports.length === 0 ? (
@@ -4387,12 +4719,11 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              {/* ===== EQUIPIER: avisos de faltantes (+), tareas y conteo del día con impresión ===== */}
-              {roleKey === 'equipier' && renderEquipierRequests()}
+              {/* ===== MANTENIMIENTO: conteo del día (imprimir, Word y reiniciar) ===== */}
+              {roleKey === 'maintenance' && renderDailyCount(true)}
 
-              {renderMyTasks()}
-
-              {roleKey === 'equipier' && renderDailyCount(true)}
+              {/* ===== EQUIPIER: solo el cuadro de tareas del día ===== */}
+              {roleKey === 'equipier' ? renderEquipierTasks() : renderMyTasks()}
             </View>
           )}
         </ScrollView>
@@ -4464,6 +4795,19 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
+              )}
+
+              {selectedTargetRole === 'equipier' && (
+                <>
+                  <Text style={styles.inputLabel}>{t.tasks.kind}</Text>
+                  <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
+                    {(['special', 'routine'] as const).map(k => (
+                      <TouchableOpacity key={k} style={[styles.personChip, newTaskKind === k && styles.personChipActive]} onPress={() => setNewTaskKind(k)}>
+                        <Text style={[styles.deptPillText, newTaskKind === k && styles.deptPillTextActive]}>{t.tasks.kinds[k]}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
               )}
 
               <Text style={styles.inputLabel}>{t.tasks.message}</Text>
@@ -4560,18 +4904,50 @@ export default function HomeScreen() {
               <Text style={styles.modalTitle}>🕒 {t.planningEdit.title}</Text>
               <Text style={styles.modalSubTitle}>{shiftEdit?.name} · {shiftEdit?.key}</Text>
 
+              {shiftEdit?.absence && (
+                <View style={styles.absenceBanner}><Text style={styles.absenceText}>🤒 {t.planningEdit.sick}</Text></View>
+              )}
+
               <Text style={styles.inputLabel}>{t.planningEdit.label}</Text>
               <TextInput
                 style={styles.input} placeholder={t.planningEdit.ph} placeholderTextColor="#64748B"
                 autoCorrect={false} value={shiftEdit?.text || ''}
-                onChangeText={v => setShiftEdit(prev => (prev ? { ...prev, text: v } : prev))}
+                onChangeText={v => setShiftEdit(prev => (prev ? { ...prev, text: v, absence: false } : prev))}
               />
+
+              <Text style={styles.inputLabel}>{t.planningEdit.presets}</Text>
               <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
                 {['07:00-15:30', '12:00-20:30', t.planning.off, t.planning.leave].map(p => (
-                  <TouchableOpacity key={p} style={styles.presetChip} onPress={() => setShiftEdit(prev => (prev ? { ...prev, text: p } : prev))}>
+                  <TouchableOpacity key={p} style={styles.presetChip} onPress={() => setShiftEdit(prev => (prev ? { ...prev, text: p, absence: false } : prev))}>
                     <Text style={styles.presetChipText}>{p}</Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+
+              {customPresets.length > 0 && (
+                <>
+                  <Text style={styles.inputLabel}>{t.planningEdit.customs}</Text>
+                  <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
+                    {customPresets.map(p => (
+                      <View key={p} style={[styles.presetChip, styles.presetChipCustom]}>
+                        <Text style={styles.presetChipText} onPress={() => setShiftEdit(prev => (prev ? { ...prev, text: p, absence: false } : prev))}>{p}</Text>
+                        <Text style={styles.presetChipX} onPress={() => removeCustomPreset(p)}>  ✕</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <TouchableOpacity style={[styles.modalCloseBtn, { backgroundColor: '#7C3AED', flex: 1 }]} onPress={saveCustomPreset}>
+                  <Text style={styles.modalCloseText}>{t.planningEdit.customize}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalCloseBtn, { backgroundColor: '#B91C1C', flex: 1 }]}
+                  onPress={() => setShiftEdit(prev => (prev ? { ...prev, text: '', absence: true } : prev))}
+                >
+                  <Text style={styles.modalCloseText}>{t.planningEdit.sickBtn}</Text>
+                </TouchableOpacity>
               </View>
               <Text style={styles.directionSubText}>{t.planningEdit.hint}</Text>
 
@@ -4590,33 +4966,22 @@ export default function HomeScreen() {
           </View>
         </Modal>
 
-        {/* ===== MODAL: aviso de faltantes por planta (equipier) ===== */}
-        <Modal visible={supplyModalVisible} animationType="slide" transparent={true} onRequestClose={() => setSupplyModalVisible(false)}>
+        {/* ===== MODAL: nueva tarea del día (equipier) ===== */}
+        <Modal visible={equipTaskModal} animationType="slide" transparent={true} onRequestClose={() => setEquipTaskModal(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{t.supply.title}</Text>
-
-              <Text style={[styles.inputLabel, { marginTop: 8 }]}>{t.supply.floor}</Text>
-              <View style={[styles.pillRow, { flexWrap: 'wrap' }]}>
-                {FLOORS.map(fl => (
-                  <TouchableOpacity key={fl.f} style={[styles.personChip, supplyFloor === fl.f && styles.personChipActive]} onPress={() => setSupplyFloor(fl.f)}>
-                    <Text style={[styles.deptPillText, supplyFloor === fl.f && styles.deptPillTextActive]}>{fl.f}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
+              <Text style={styles.modalTitle}>{t.equipierTasks.newTitle}</Text>
               <TextInput
-                style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
-                placeholder={t.supply.textPH} placeholderTextColor="#64748B" multiline
-                value={supplyText} onChangeText={setSupplyText}
+                style={[styles.input, { height: 90, textAlignVertical: 'top', marginTop: 10 }]}
+                placeholder={t.equipierTasks.placeholder} placeholderTextColor="#64748B" multiline
+                value={equipTaskText} onChangeText={setEquipTaskText}
               />
-
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity style={[styles.modalCloseBtn, { backgroundColor: '#64748B', flex: 1 }]} onPress={() => setSupplyModalVisible(false)}>
+                <TouchableOpacity style={[styles.modalCloseBtn, { backgroundColor: '#64748B', flex: 1 }]} onPress={() => setEquipTaskModal(false)}>
                   <Text style={styles.modalCloseText}>{t.common.cancel}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalCloseBtn, { backgroundColor: '#b45309', flex: 1 }]} onPress={submitSupplyRequest}>
-                  <Text style={styles.modalCloseText}>{t.supply.add}</Text>
+                <TouchableOpacity style={[styles.modalCloseBtn, { backgroundColor: '#b45309', flex: 1 }]} onPress={submitOwnTask}>
+                  <Text style={styles.modalCloseText}>{t.equipierTasks.add}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -5146,6 +5511,16 @@ const styles = StyleSheet.create({
   fixedBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: 'rgba(224,242,254,0.97)', borderTopWidth: 1, borderTopColor: '#BAE6FD' },
   fixedBarBtn: { backgroundColor: '#5b21b6', paddingVertical: 15, borderRadius: 12, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
   fixedBarBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+
+  // Asignación por colores, horarios personalizados
+  workerChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 18, borderWidth: 2, backgroundColor: '#FFFFFF' },
+  workerChipText: { fontSize: 13, fontWeight: 'bold' },
+  catCount: { fontSize: 12, fontWeight: 'bold', color: '#0F172A', marginTop: 2, textAlign: 'center' },
+  pendingRow: { borderLeftWidth: 4, paddingLeft: 8, marginTop: 10 },
+  absenceBanner: { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5', borderWidth: 1, borderRadius: 8, padding: 8, marginBottom: 10 },
+  absenceText: { color: '#B91C1C', fontWeight: 'bold', fontSize: 13, textAlign: 'center' },
+  presetChipCustom: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EDE9FE', borderColor: '#C4B5FD' },
+  presetChipX: { color: '#B91C1C', fontWeight: 'bold', fontSize: 12 },
 
   // Utensilios
   invRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
